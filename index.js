@@ -21,7 +21,8 @@ mongoose.connect(config.mongoURL, { useNewUrlParser: true })
 })
 
 
-job.updateLoans()
+// job.updateLoans()
+job.updateAccessFee()
 
 // new CronJob('*/30 * * * * *', function () {   
 //  console.log('Top 50 holders updated at ' + moment().format('YYYY-MM-DD HH:mm:ss'));

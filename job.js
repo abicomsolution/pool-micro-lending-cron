@@ -1,5 +1,6 @@
 const Member = require("./models/member")
 const Offer = require("./models/offer")
+const Accessfee = require("./models/accessfee")
 const _ = require("lodash")
 const async = require("async")
 const moment = require("moment")
@@ -10,6 +11,8 @@ const fs = require('fs');
 const axios = require("axios");
 const { ethers, JsonRpcProvider, parseEther, formatEther  } = require('ethers')
 const PMLContractConfig = require("./pmlAbi")
+const PFBContractConfig = require("./pfbAbi")
+const pairCon = require("./pairCon.json")
 
 var customHttpProvider = new JsonRpcProvider("https://bsc-dataseed.binance.org");
 
@@ -31,20 +34,27 @@ function stripExcessDecimals(amount) {
     }
 }
 
+function roundToTwo(num) {
+    return +(Math.round(num + "e+2")  + "e-2");
+}
+
+
 function Job() {
 
 
     this.updateLoans = async function () {        
 
         let defaultLoans = []
+        let pmlprice = 0
 
         const getDefaultLoans= function(){
             return new Promise(function(resolve, reject) {          
                 Offer.find({status: 1, ispaid: false })
-                .populate("member_id")               
+                .populate("member_id")              
+                .populate("borrower_id")        
                 .then((result) => {
 
-                    console.log("Total defaulted loans: " + result.length)            
+                    console.log("Total loans: " + result.length)            
 
                     async.eachSeries(result, function (e, next) {
                      
@@ -65,16 +75,25 @@ function Job() {
             })
         }
 
+        const getPMLPrice= function(){
+            return new Promise(function(resolve, reject) {          
+                pullPMLPrice((price)=>{                
+                    pmlprice = price
+                    resolve()
+                })    
+            })
+        }            
+
         const iterateDefaultLoans = function(){
             return new Promise(function(resolve, reject){          
                     async.eachSeries(defaultLoans, function (e, next) {                     
                         
-                        console.log("Loan Ref#: " + e.refno + " Borrower: " + e.member_id.fullname + " address: " + e.member_id.walletaddress)
-                        next()
+                        // console.log("Loan Ref#: " + e.refno + " Borrower: " + e.member_id.fullname + " address: " + e.member_id.walletaddress)
+                        // next()
                         
-                        // autoPayBack(e, function(){
-                        //     next()
-                        // })
+                        autoPayBack(e, pmlprice, function(){
+                            next()
+                        })
                         
                         
                     }, function () {
@@ -85,6 +104,7 @@ function Job() {
         }
 
         getDefaultLoans()    
+        .then(getPMLPrice)
         .then(iterateDefaultLoans)   
         .then(function () {
             console.log("Done")
@@ -95,82 +115,176 @@ function Job() {
 
     }
 
-    async function autoPayBack(data, cb) {
+    this.updateAccessFee = async function () {        
+        
+        let memb = []
+        let counter = 0
 
-        setTimeout(() => {              
-            
-           
-            
-            // console.log(PMLContractConfig.abi)
-            // console.log("Loan Ref#: " + data.refno + " Borrower: " + data.member_id.fullname + " Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD")  + " payme: " + data.member_id.collateralpayment)
-            // cb()
-
-            if (data.member_id.collateralpayment==1){
-                sendPMLTokens(data, function(txhash){
-                    let params = {
-                        status: 2,
-                        ispaid: true,
-                        pay_pml_txhash: "",
-                        pay_collateral_txhash: txhash,                
-                        paid_at: moment().toDate()       
-                    }
-                    Offer.findByIdAndUpdate(data._id, params)
-                    .then(()=>{
-                        cb()
-                    })                    
+        const getMmbers= function(){
+            return new Promise(function(resolve, reject) {          
+                Member.find({hasaaccessfee: true})
+                .then((result) => {
+                    memb = result
+                    resolve()
                 })
-            }
+            })
+        }
 
+        const iterate= function(){
+            return new Promise(function(resolve, reject) {          
+                async.eachSeries(memb, function (e, next) {                                        
+                   Accessfee.find({member_id: e._id})
+                   .then((result) => {
+                     
+                        if (result.length>0){
+                          
+                            let af = result[result.length-1]                                                        
+                            var now = moment(new Date())
+                            var datel = moment(af.transdate)
+                            var duration = moment.duration(now.diff(datel));
+                            var days = duration.asDays();
+                            console.log(e.fullname + " -- " + days)
+                            if (days>=30){
+                                counter = counter + 1
+                                Member.findByIdAndUpdate(e._id, {hasaaccessfee: false})
+                                .then((result) => {
+                                    next()
+                                })
+                            }else{
+                                next()
+                            }                        
+                        }else{
+                            next()
+                        }
+                        
+                   })                  
+                }, function () {
+                    resolve()
+                })    
+            })
+        }
 
-        }, 1000);
+        getMmbers()    
+        .then(iterate)        
+        .then(function () {
+            console.log("Done " + memb.length + " - " + counter)
+        })
+        .catch(function(err){
+            console.log(err)            
+        })
 
 
     }
 
-     async function sendPMLTokens(data, cb) {
+    async function autoPayBack(data, pmlprice, cb) {
+            
+        // console.log(PMLContractConfig.abi)        
+        // cb()
 
-        console.log("sendPMLTokens.....")
+        if (data.member_id.collateralpayment==1){
+            // console.log("Loan Ref#: " + data.refno + " Lender: " + data.member_id.fullname + "(" + data.member_id.walletaddress + ")  Borrower: " + data.borrower_id.fullname + "(" + data.borrower_id.walletaddress + ") Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD")  + " payme: " + data.member_id.collateralpayment)
+            sendPMLTokens(data, pmlprice,  function(txhash){               
+                let params = {
+                    status: 2,
+                    ispaid: true,
+                    pay_pml_txhash: txhash,
+                    // pay_collateral_txhash: txhash,                
+                    paid_at: moment().toDate()       
+                }
+                Offer.findByIdAndUpdate(data._id, params)
+                .then(()=>{
+                    cb()
+                })                    
+            })
+            // console.log("--pml--")
+            // cb()
+        }else if (data.member_id.collateralpayment==0){
+            
+            if (data.collateral_token_type==3) {
+                // PFG
+                // console.log("PFG")
+                 cb() 
+            }else if (data.collateral_token_type==2) {
+                // PFS
+                console.log("PFS")
+                 cb() 
+            }else if (data.collateral_token_type==1) {
+                console.log("PFB")
+                cb() 
+                // PFB
+                // pullPFBPrice((price)=>{                   
+                //     sendPFBTokens(data, price,  function(txhash){               
+                //         let params = {
+                //             status: 2,
+                //             ispaid: true,
+                //             pay_pml_txhash: "",
+                //             pay_collateral_txhash: txhash,                
+                //             paid_at: moment().toDate()       
+                //         }
+                //         Offer.findByIdAndUpdate(data._id, params)
+                //         .then(()=>{
+                //             cb()
+                //         })                
+                //     })                    
+                // })
+            }else if (data.collateral_token_type==0) {
+                // PFI
+                console.log("PFI")
+                cb() 
+            }else{
+                cb()        
+            }                              
+        }else{
+            cb()
+        }      
+    }
 
+     async function sendPMLTokens(data, pmlprice, cb) {
+
+        // console.log("sendPMLTokens.....")
+        // cb("hash")
         const PK = process.env.SENDER_PK
         const cwallet = new ethers.Wallet(PK, customHttpProvider)              
         const pmlContract = new ethers.Contract(PMLContractConfig.address, PMLContractConfig.abi, customHttpProvider);
-        pmlContract.balanceOf(process.env.SENDER_FUND_ADDR)
-        .then((pmlBalance)=>{
-            let pmlB = formatEther(pmlBalance)                      
-            pullPMLPrice((price)=>{                
-                let pmltokens =  100 / price                
-                let amtStr = stripExcessDecimals(pmltokens)                            
-                if (Number(amtStr) > 0) {
-                    var bgamount = parseEther(amtStr)
-                    console.log(bgamount)
-                    // console.log("Loan Ref#: " + data.refno + " Borrower: " + data.member_id.fullname + " Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD")  + " payme: " + data.member_id.collateralpayment)         
-                    let receiver = data.member_id.walletaddress
-                    pmlContract.connect(cwallet).transfer(receiver, bgamount)
-                    .then((tx)=>{
-                        tx.wait(1)
-                        .then((receipt)=>{
-                            console.log(receipt.hash)
-                            cb(receipt.hash)                            
-                        })
-                        .catch((err)=>{
-                            console.log(err)                            
-                            cb("")
-                        })                       
-                    })
-                    .catch((err)=>{
-                        console.log(err)                       
-                        cb("")
-                    })                    
-                } else {
-                    cb()
-                }    
-            })                                  
-        }).catch((err)=>{
-            // console.log(err)
-            console.log("e3")
+                 
+        let pmltokens =  100 / pmlprice                
+        let amtStr = stripExcessDecimals(pmltokens)           
+        if (Number(amtStr) > 0) {
+            var bgamount = parseEther(amtStr)
+            // console.log(bgamount)            
+            // data.member_id.walletaddress  
+            let receiver = data.member_id.walletaddress 
+            //"0xc5Ee5EDe4DbE219eB0FB8b11F2953A9149350725"
+            //data.member_id.walletaddress          
+            pmlContract.connect(cwallet).transfer(receiver, bgamount)
+            .then((tx)=>{
+                tx.wait(1)
+                .then((receipt)=>{
+                    // console.log(receipt.hash)
+                    console.log("Loan Ref#: " + data.refno + " Lender: " + data.member_id.fullname + "(" + data.member_id.walletaddress + ")  Borrower: " + data.borrower_id.fullname + "(" + data.borrower_id.walletaddress + ") Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD")  + " payme: " + data.member_id.collateralpayment)
+                    cb(receipt.hash)                            
+                })
+                .catch((err)=>{
+                    console.log(err)                            
+                    cb("")
+                })                       
+            })
+            .catch((err)=>{
+                console.log(err)                       
+                cb("")
+            })                    
+        } else {
             cb("")
-        })
+        }   
 
+        // pmlContract.balanceOf(process.env.SENDER_FUND_ADDR)
+        // .then((pmlBalance)=>{
+                                                      
+        // }).catch((err)=>{
+        //     // console.log(err)
+        //     console.log("e3")
+        //     cb("")
+        // })
 
      }
 
@@ -244,6 +358,89 @@ function Job() {
 
 
     }
+
+    async function pullPFBPrice(cb){
+
+        // console.log("pullPFBPrice")
+        try {
+            let PAIRAD = "0x09f8bc3b4bdc152fcd8894515dd4a95bd3dca26e"        
+            const USDTADDR = process.env.USDTADDR
+            
+            const pairContract = new ethers.Contract(PAIRAD, pairCon.abi, customHttpProvider)    
+        
+            const reserves = await pairContract.getReserves()
+            const reserve0 = reserves.reserve0;
+            const reserve1 = reserves.reserve1;
+
+            const token0 = await pairContract.token0()
+            const token1 = await pairContract.token1()           
+            let price;
+            if (token0.toLowerCase() === USDTADDR.toLowerCase()) {
+            // USDT is token0, price is reserve0 / reserve1
+                price = reserve0 / reserve1;
+            } else {
+            // USDT is token1, price is reserve1 / reserve0
+                price = reserve1 / reserve0;
+            }
+                
+            price = roundToTwo(price)
+
+            cb(price)
+
+        }catch(err){
+            console.log(err)
+            cb(0)
+        }
+
+
+    }
+
+
+    async function sendPFBTokens(data, pfbprice, cb) {
+
+        console.log("sendPFGTokens.....")                        
+        let tokens = stripExcessDecimals(data.collateral_token)         
+        let currenttokenprice = Number(tokens) * pfbprice        
+        let toreceive = 0
+        if (currenttokenprice>=100){
+            toreceive = Number(tokens)
+        }else{
+            toreceive =  100 / pfbprice                   
+        }
+        console.log("to receive: " + toreceive)     
+        
+        const PK = process.env.SENDER_PK
+        const cwallet = new ethers.Wallet(PK, customHttpProvider)              
+        const pfbContract = new ethers.Contract(PFBContractConfig.address, PFBContractConfig.abi, customHttpProvider);
+                         
+        let amtStr = stripExcessDecimals(toreceive)           
+        if (Number(amtStr) > 0) {
+            var bgamount = parseEther(amtStr)
+            // console.log(bgamount)            
+            // data.member_id.walletaddress  
+            let receiver = "0xc5Ee5EDe4DbE219eB0FB8b11F2953A9149350725"
+            //data.member_id.walletaddress          
+            pfbContract.connect(cwallet).transfer(receiver, bgamount)
+            .then((tx)=>{
+                tx.wait(1)
+                .then((receipt)=>{
+                    // console.log(receipt.hash)
+                    console.log("Loan Ref#: " + data.refno + " Lender: " + data.member_id.fullname + "(" + data.member_id.walletaddress + ")  Borrower: " + data.borrower_id.fullname + "(" + data.borrower_id.walletaddress + ") Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD")  + " payme: " + data.member_id.collateralpayment)
+                    cb(receipt.hash)                            
+                })
+                .catch((err)=>{
+                    console.log(err)                            
+                    cb("")
+                })                       
+            })
+            .catch((err)=>{
+                console.log(err)                       
+                cb("")
+            })                    
+        } else {
+            cb("")
+        }   
+     }
 
    
 
