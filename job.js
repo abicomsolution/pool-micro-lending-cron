@@ -201,7 +201,7 @@ function Job() {
             
             if (data.collateral_token_type==3) {
                 // PFG
-                // console.log("PFG")
+                console.log("PFG")
                  cb() 
             }else if (data.collateral_token_type==2) {
                 // PFS
@@ -209,23 +209,22 @@ function Job() {
                  cb() 
             }else if (data.collateral_token_type==1) {
                 console.log("PFB")
-                cb() 
+                // cb() 
                 // PFB
-                // pullPFBPrice((price)=>{                   
-                //     sendPFBTokens(data, price,  function(txhash){               
-                //         let params = {
-                //             status: 2,
-                //             ispaid: true,
-                //             pay_pml_txhash: "",
-                //             pay_collateral_txhash: txhash,                
-                //             paid_at: moment().toDate()       
-                //         }
-                //         Offer.findByIdAndUpdate(data._id, params)
-                //         .then(()=>{
-                //             cb()
-                //         })                
-                //     })                    
-                // })
+                pullPFBPrice((price)=>{                   
+                    sendPFBTokens(data, price,  function(txhash){               
+                        let params = {
+                            status: 2,
+                            ispaid: true,
+                             pay_pml_txhash: txhash,               
+                            paid_at: moment().toDate()       
+                        }
+                        Offer.findByIdAndUpdate(data._id, params)
+                        .then(()=>{
+                            cb()
+                        })                
+                    })                    
+                })
             }else if (data.collateral_token_type==0) {
                 // PFI
                 console.log("PFI")
@@ -467,7 +466,8 @@ function Job() {
             var bgamount = parseEther(amtStr)
             // console.log(bgamount)            
             // data.member_id.walletaddress  
-            let receiver = "0xc5Ee5EDe4DbE219eB0FB8b11F2953A9149350725"
+            let receiver = data.member_id.walletaddress              
+            // "0xc5Ee5EDe4DbE219eB0FB8b11F2953A9149350725"
             //data.member_id.walletaddress          
             pfbContract.connect(cwallet).transfer(receiver, bgamount)
             .then((tx)=>{
