@@ -13,6 +13,8 @@ const { ethers, JsonRpcProvider, parseEther, formatEther  } = require('ethers')
 const PMLContractConfig = require("./pmlAbi")
 const PFBContractConfig = require("./pfbAbi")
 const PFIContractConfig = require("./pfiAbi")
+const PFSContractConfig = require("./pfsAbi")
+const PFGContractConfig = require("./pfgAbi")
 const pairCon = require("./pairCon.json")
 
 var customHttpProvider = new JsonRpcProvider("https://bsc-dataseed.binance.org");
@@ -183,6 +185,7 @@ function Job() {
         // cb()     
         if (data.member_id.collateralpayment==1){
             // console.log("Loan Ref#: " + data.refno + " Lender: " + data.member_id.fullname + "(" + data.member_id.walletaddress + ")  Borrower: " + data.borrower_id.fullname + "(" + data.borrower_id.walletaddress + ") Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD")  + " payme: " + data.member_id.collateralpayment)
+            console.log("--pml--")
             sendPMLTokens(data, pmlprice,  function(txhash){               
                 let params = {
                     status: 2,
@@ -195,18 +198,53 @@ function Job() {
                     cb()
                 })                    
             })
-            // console.log("--pml--")
+            
             // cb()
         }else if (data.member_id.collateralpayment==0){
             
             if (data.collateral_token_type==3) {
                 // PFG
                 console.log("PFG")
-                 cb() 
+                //  cb() 
+                 // console.log("Loan Ref#: " + data.refno + " Lender: " + data.member_id.fullname + "(" + data.member_id.walletaddress + ")  Borrower: " + data.borrower_id.fullname + "(" + data.borrower_id.walletaddress + ") Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD")  + " payme: " + data.member_id.collateralpayment)
+                pullPFGPrice((price)=>{    
+                    // console.log(price)               
+                    //  cb()
+                    sendPFGTokens(data, price,  function(txhash){               
+                        let params = {
+                            status: 2,
+                            ispaid: true,
+                             pay_pml_txhash: txhash,               
+                            paid_at: moment().toDate()       
+                        }
+                        Offer.findByIdAndUpdate(data._id, params)
+                        .then(()=>{
+                            cb()
+                        })   
+                        // cb()             
+                    })                    
+                })
             }else if (data.collateral_token_type==2) {
                 // PFS
                 console.log("PFS")
-                 cb() 
+                // cb() 
+                // console.log("Loan Ref#: " + data.refno + " Lender: " + data.member_id.fullname + "(" + data.member_id.walletaddress + ")  Borrower: " + data.borrower_id.fullname + "(" + data.borrower_id.walletaddress + ") Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD")  + " payme: " + data.member_id.collateralpayment)
+                pullPFSPrice((price)=>{    
+                    // console.log(price)               
+                    //  cb()
+                    sendPFSTokens(data, price,  function(txhash){               
+                        let params = {
+                            status: 2,
+                            ispaid: true,
+                             pay_pml_txhash: txhash,               
+                            paid_at: moment().toDate()       
+                        }
+                        Offer.findByIdAndUpdate(data._id, params)
+                        .then(()=>{
+                            cb()
+                        })                
+                    })                    
+                })
             }else if (data.collateral_token_type==1) {
                 console.log("PFB")
                 // cb() 
@@ -446,7 +484,7 @@ function Job() {
 
     async function sendPFBTokens(data, pfbprice, cb) {
 
-        console.log("sendPFGTokens.....")                        
+        console.log("sendPFBTokens.....")                        
         let tokens = stripExcessDecimals(data.collateral_token)         
         let currenttokenprice = Number(tokens) * pfbprice        
         let toreceive = 0
@@ -540,7 +578,172 @@ function Job() {
         }   
     }
 
+
+    async function pullPFSPrice(cb){
+
+        // console.log("pullPFBPrice")
+        try {
+            let PAIRAD = "0xfa01cb55a68380e2d5c66a70e4e728fc6277feb2"        
+            const USDTADDR = process.env.USDTADDR
+            
+            const pairContract = new ethers.Contract(PAIRAD, pairCon.abi, customHttpProvider)    
+        
+            const reserves = await pairContract.getReserves()
+            const reserve0 = reserves.reserve0;
+            const reserve1 = reserves.reserve1;
+
+            const token0 = await pairContract.token0()
+            const token1 = await pairContract.token1()           
+            let price;
+            if (token0.toLowerCase() === USDTADDR.toLowerCase()) {
+            // USDT is token0, price is reserve0 / reserve1
+                price = reserve0 / reserve1;
+            } else {
+            // USDT is token1, price is reserve1 / reserve0
+                price = reserve1 / reserve0;
+            }
+                
+            price = roundToTwo(price)
+
+            cb(price)
+
+        }catch(err){
+            console.log(err)
+            cb(0)
+        }
+
+
+    }
+
+    async function sendPFSTokens(data, pfbprice, cb) {
+
+        console.log("sendPFSTokens.....")                        
+        let tokens = stripExcessDecimals(data.collateral_token)         
+        let currenttokenprice = Number(tokens) * pfbprice        
+        let toreceive = 0
+        if (currenttokenprice>=100){
+            toreceive = Number(tokens)
+        }else{
+            toreceive =  100 / pfbprice                   
+        }
+        console.log("to receive: " + toreceive)     
+        
+        const PK = process.env.SENDER_PK
+        const cwallet = new ethers.Wallet(PK, customHttpProvider)              
+        const pfbContract = new ethers.Contract(PFSContractConfig.address, PFSContractConfig.abi, customHttpProvider);
+                         
+        let amtStr = stripExcessDecimals(toreceive)           
+        if (Number(amtStr) > 0) {
+            var bgamount = parseEther(amtStr)
+            // console.log(bgamount)            
+            // data.member_id.walletaddress  
+            let receiver = data.member_id.walletaddress              
+            // "0xc5Ee5EDe4DbE219eB0FB8b11F2953A9149350725"
+            //data.member_id.walletaddress          
+            pfbContract.connect(cwallet).transfer(receiver, bgamount)
+            .then((tx)=>{
+                tx.wait(1)
+                .then((receipt)=>{
+                    // console.log(receipt.hash)
+                    console.log("Loan Ref#: " + data.refno + " Lender: " + data.member_id.fullname + "(" + data.member_id.walletaddress + ")  Borrower: " + data.borrower_id.fullname + "(" + data.borrower_id.walletaddress + ") Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD")  + " payme: " + data.member_id.collateralpayment)
+                    cb(receipt.hash)                            
+                })
+                .catch((err)=>{
+                    console.log(err)                            
+                    cb("")
+                })                       
+            })
+            .catch((err)=>{
+                console.log(err)                       
+                cb("")
+            })                    
+        } else {
+            cb("")
+        }   
+    }
    
+     async function pullPFGPrice(cb){
+
+        // console.log("pullPFBPrice")
+        try {
+            let PAIRAD = "0xd36fa2412cae6db25dfbc6348d5e4cdd9665ad4b"        
+            const USDTADDR = process.env.USDTADDR
+            
+            const pairContract = new ethers.Contract(PAIRAD, pairCon.abi, customHttpProvider)    
+        
+            const reserves = await pairContract.getReserves()
+            const reserve0 = reserves.reserve0;
+            const reserve1 = reserves.reserve1;
+
+            const token0 = await pairContract.token0()
+            const token1 = await pairContract.token1()           
+            let price;
+            if (token0.toLowerCase() === USDTADDR.toLowerCase()) {
+            // USDT is token0, price is reserve0 / reserve1
+                price = reserve0 / reserve1;
+            } else {
+            // USDT is token1, price is reserve1 / reserve0
+                price = reserve1 / reserve0;
+            }
+                
+            price = roundToTwo(price)
+
+            cb(price)
+
+        }catch(err){
+            console.log(err)
+            cb(0)
+        }
+    }
+
+    async function sendPFGTokens(data, pfbprice, cb) {
+
+        console.log("sendPFGTokens.....")                        
+        let tokens = stripExcessDecimals(data.collateral_token)         
+        let currenttokenprice = Number(tokens) * pfbprice        
+        let toreceive = 0
+        if (currenttokenprice>=100){
+            toreceive = Number(tokens)
+        }else{
+            toreceive =  100 / pfbprice                   
+        }
+        toreceive = 0.00001
+        console.log("to receive: " + toreceive)     
+        
+        const PK = process.env.SENDER_PK
+        const cwallet = new ethers.Wallet(PK, customHttpProvider)              
+        const pfbContract = new ethers.Contract(PFGContractConfig.address, PFGContractConfig.abi, customHttpProvider);
+                         
+        let amtStr = stripExcessDecimals(toreceive)           
+        if (Number(amtStr) > 0) {
+            var bgamount = parseEther(amtStr)
+            // console.log(bgamount)            
+            // data.member_id.walletaddress  
+            let receiver =  data.member_id.walletaddress
+            // data.member_id.walletaddress              
+            // "0xE8e4B893eF7A215E6Fb7D86155deE4e4e49d9789"
+            //data.member_id.walletaddress          
+            pfbContract.connect(cwallet).transfer(receiver, bgamount)
+            .then((tx)=>{
+                tx.wait(1)
+                .then((receipt)=>{
+                    // console.log(receipt.hash)
+                    console.log("Loan Ref#: " + data.refno + " Lender: " + data.member_id.fullname + "(" + data.member_id.walletaddress + ")  Borrower: " + data.borrower_id.fullname + "(" + data.borrower_id.walletaddress + ") Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD")  + " payme: " + data.member_id.collateralpayment)
+                    cb(receipt.hash)                            
+                })
+                .catch((err)=>{
+                    console.log(err)                            
+                    cb("")
+                })                       
+            })
+            .catch((err)=>{
+                console.log(err)                       
+                cb("")
+            })                    
+        } else {
+            cb("")
+        }   
+    }
 
 }
 
