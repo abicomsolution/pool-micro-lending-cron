@@ -20,8 +20,8 @@ mongoose.connect(config.mongoURL, { useNewUrlParser: true })
     console.log(error)
 })
 
-
-job.updateLoans()
+job.updateRebates()
+// job.updateLoans()
 // job.updateAccessFee()
 
 // new CronJob('*/30 * * * * *', function () {   

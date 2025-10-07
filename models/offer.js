@@ -19,8 +19,9 @@ const offerSchema = new Schema({
     paid_at: { type: Date, default: null },
     borrower_id: { type: Schema.Types.ObjectId, ref: "member", default: null },
     received_pml_tokens: { type: Number, default: 0 },       
-    pay_pml_txhash: { type: "String", default: "" },
+    pay_pml_txhash: { type: "String", default: "" },    
     pay_collateral_txhash: { type: "String", default: "" },
+    hasRebate: { type: Boolean, default: false }
 })
 
 module.exports = mongoose.model('offer', offerSchema);

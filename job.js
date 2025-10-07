@@ -16,6 +16,7 @@ const PFIContractConfig = require("./pfiAbi")
 const PFSContractConfig = require("./pfsAbi")
 const PFGContractConfig = require("./pfgAbi")
 const pairCon = require("./pairCon.json")
+const Rebates = require("./models/rebates")
 
 var customHttpProvider = new JsonRpcProvider("https://bsc-dataseed.binance.org");
 
@@ -44,6 +45,169 @@ function roundToTwo(num) {
 
 function Job() {
 
+
+      this.updateRebates= async function () {        
+
+        let loanoffers = []
+        let pmlprice = 0
+
+        const getSixtyDaysLoans= function(){
+            return new Promise(function(resolve, reject) {          
+                Offer.find({ispaid: true, hasRebate: false})
+                .populate("member_id")              
+                .populate("borrower_id")        
+                .then((result) => {
+
+                    console.log("Total paid loans: " + result.length)            
+
+                    async.eachSeries(result, function (e, next) {
+                     
+                        var now = moment(new Date())
+                        var datel = moment(e.borrowed_at)
+                        var duration = moment.duration(now.diff(datel));
+                        var days = duration.asDays();
+                        // console.log("Loan Ref#: " + e.refno + " Borrower: " + e.member_id.fullname + " Days: " + days + " Date Loaned: " + moment(e.borrowed_at).format("YYYY-MM-DD") )
+                        if (days>=60) {
+                           loanoffers.push(e)
+                        }
+
+                        next()
+                    }, function () {
+                        console.log("Total 60 days loans: " + loanoffers.length)
+                        resolve()
+                    })                  
+                })
+            })
+        }
+
+        const getPMLPrice= function(){
+            return new Promise(function(resolve, reject) {          
+                pullPMLPrice((price)=>{                
+                    pmlprice = price
+                    resolve()
+                })    
+            })
+        }            
+
+        const iterateloanoffers = function(){
+            return new Promise(function(resolve, reject){          
+                    async.eachSeries(loanoffers, function (e, next) {                                                                     
+                        saveAndSendRebate(e, pmlprice, function(){
+                            next()                                                                        
+                        })                        
+                    }, function () {
+                        resolve()
+                    })    
+
+            })
+        }
+
+        getSixtyDaysLoans()    
+        .then(getPMLPrice)
+        .then(iterateloanoffers)   
+        .then(function () {
+            console.log("Done")
+        })
+        .catch(function(err){
+            console.log(err)            
+        })
+
+    }
+
+    async function saveAndSendRebate(data, pmlprice, cb) {
+
+        // console.log("saveAndSendRebate.....")
+
+        try {
+
+            console.log("Loan Ref#: " + data.refno + " Borrower: " + data.member_id.fullname + " address: " + data.member_id.walletaddress + " Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD"))
+
+            let params = {
+                member_id: data.member_id._id,
+                transdate: moment().toDate(),            
+                txhash: "",     
+                usdamount: 50,       
+                amount: 0,
+                loan_id: data._id
+            }
+
+            let newRebate = new Rebates(params)
+            let nm = await newRebate.save()
+
+            sendPMLRebates(data, pmlprice,  function(val){     
+                console.log(val)
+                let params = { hasRebate: true}
+                Offer.findByIdAndUpdate(data._id, params)
+                .then(()=>{
+                    Rebates.findByIdAndUpdate(nm._id, { txhash: val.hash, amount: val.amount }) 
+                    .then(()=>{
+                        cb()
+                    })                
+                })   
+
+            })           
+        }catch(err){
+            console.log(err)         
+            cb()
+        }
+    }
+
+
+      async function sendPMLRebates(data, pmlprice, cb) {
+
+        // console.log("sendPMLTokens.....")
+        // cb("hash")
+        let retVal = {
+            amount:0,
+            hash: ""
+        }
+        const PK = process.env.SENDER_PK
+        const cwallet = new ethers.Wallet(PK, customHttpProvider)              
+        const pmlContract = new ethers.Contract(PMLContractConfig.address, PMLContractConfig.abi, customHttpProvider);
+                 
+        let pmltokens =  50 / pmlprice                
+        let amtStr = stripExcessDecimals(pmltokens)         
+        retVal.amount = Number(amtStr)
+
+        if (Number(amtStr) > 0) {
+            var bgamount = parseEther(amtStr)
+            console.log("amount: " + bgamount)            
+            // data.member_id.walletaddress  
+            let receiver = data.member_id.walletaddress 
+            //"0xc5Ee5EDe4DbE219eB0FB8b11F2953A9149350725"
+            //data.member_id.walletaddress                                
+            pmlContract.connect(cwallet).transfer(receiver, bgamount)
+            .then((tx)=>{
+                tx.wait(1)
+                .then((receipt)=>{
+                    console.log(receipt.hash)
+                    retVal.hash = receipt.hash
+                    // console.log("Loan Ref#: " + data.refno + " Lender: " + data.member_id.fullname + "(" + data.member_id.walletaddress + ")  Borrower: " + data.borrower_id.fullname + "(" + data.borrower_id.walletaddress + ") Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD")  + " payme: " + data.member_id.collateralpayment)
+                    cb(retVal)                            
+                })
+                .catch((err)=>{
+                    console.log(err)                            
+                    cb(retVal)
+                })                       
+            })
+            .catch((err)=>{
+                console.log(err)                       
+                cb(retVal)
+            })                    
+        } else {
+            cb(retVal)
+        }   
+
+        // pmlContract.balanceOf(process.env.SENDER_FUND_ADDR)
+        // .then((pmlBalance)=>{
+                                                      
+        // }).catch((err)=>{
+        //     // console.log(err)
+        //     console.log("e3")
+        //     cb("")
+        // })
+
+    }
 
     this.updateLoans = async function () {        
 
@@ -291,7 +455,7 @@ function Job() {
         }      
     }
 
-     async function sendPMLTokens(data, pmlprice, cb) {
+    async function sendPMLTokens(data, pmlprice, cb) {
 
         // console.log("sendPMLTokens.....")
         // cb("hash")
@@ -338,7 +502,7 @@ function Job() {
         //     cb("")
         // })
 
-     }
+    }
 
      
     async function pullPMLPrice(cb){
@@ -447,7 +611,7 @@ function Job() {
 
     }
 
-     async function pullPFIPrice(cb){
+    async function pullPFIPrice(cb){
 
         // console.log("pullPFBPrice")
         try {
@@ -480,7 +644,6 @@ function Job() {
             cb(0)
         }
     }
-
 
     async function sendPFBTokens(data, pfbprice, cb) {
 
@@ -529,7 +692,7 @@ function Job() {
         }   
     }
 
-     async function sendPFITokens(data, pfiprice, cb) {
+    async function sendPFITokens(data, pfiprice, cb) {
 
         console.log("sendPFITokens.....")                        
         let tokens = stripExcessDecimals(data.collateral_token)     
@@ -577,7 +740,6 @@ function Job() {
             cb("")
         }   
     }
-
 
     async function pullPFSPrice(cb){
 
@@ -662,7 +824,7 @@ function Job() {
         }   
     }
    
-     async function pullPFGPrice(cb){
+    async function pullPFGPrice(cb){
 
         // console.log("pullPFBPrice")
         try {
