@@ -120,10 +120,9 @@ function Job() {
 
         try {
 
-            console.log("Loan Ref#: " + data.refno + " Borrower: " + data.member_id.fullname + " address: " + data.member_id.walletaddress + " Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD"))
-
+            console.log("Loan Ref#: " + data.refno + " Borrower: " + data.borrower_id.fullname + " address: " + data.borrower_id.walletaddress + " Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD"))            
             let params = {
-                member_id: data.member_id._id,
+                member_id: data.borrower_id._id,
                 transdate: moment().toDate(),            
                 txhash: "",     
                 usdamount: 50,       
@@ -135,7 +134,7 @@ function Job() {
             let nm = await newRebate.save()
 
             sendPMLRebates(data, pmlprice,  function(val){     
-                console.log(val)
+                console.log(val)               
                 let params = { hasRebate: true}
                 Offer.findByIdAndUpdate(data._id, params)
                 .then(()=>{
@@ -144,8 +143,7 @@ function Job() {
                         cb()
                     })                
                 })   
-
-            })           
+            })
         }catch(err){
             console.log(err)         
             cb()
@@ -173,7 +171,7 @@ function Job() {
             var bgamount = parseEther(amtStr)
             console.log("amount: " + bgamount)            
             // data.member_id.walletaddress  
-            let receiver = data.member_id.walletaddress 
+            let receiver = data.borrower_id.walletaddress 
             //"0xc5Ee5EDe4DbE219eB0FB8b11F2953A9149350725"
             //data.member_id.walletaddress                                
             pmlContract.connect(cwallet).transfer(receiver, bgamount)
