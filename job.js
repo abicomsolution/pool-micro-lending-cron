@@ -125,7 +125,7 @@ function Job() {
                 member_id: data.borrower_id._id,
                 transdate: moment().toDate(),            
                 txhash: "",     
-                usdamount: 50,       
+                usdamount: 100,       
                 amount: 0,
                 loan_id: data._id
             }
@@ -163,7 +163,7 @@ function Job() {
         const cwallet = new ethers.Wallet(PK, customHttpProvider)              
         const pmlContract = new ethers.Contract(PMLContractConfig.address, PMLContractConfig.abi, customHttpProvider);
                  
-        let pmltokens =  50 / pmlprice                
+        let pmltokens =  100 / pmlprice                
         let amtStr = stripExcessDecimals(pmltokens)         
         retVal.amount = Number(amtStr)
 
