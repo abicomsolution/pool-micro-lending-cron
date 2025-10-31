@@ -242,7 +242,7 @@ function Job() {
                         try {
                             // let url = "http://localhost:5173/api/check-status/"+ e.borrower_id.walletaddress 
                             let url = "https://poolfunding.io/api/check-status/"+ e.borrower_id.walletaddress
-                            // console.log(url)
+                            console.log(url)
                             let res = await axios.get(url)
                             if (res.data && res.data.status == 1) {                              
                                 if (res.data.data && res.data.data.isSuspended) {
@@ -260,7 +260,7 @@ function Job() {
                             }   
                             // await new Promise(resolve => setTimeout(resolve, 1000))                                             
                         } catch (error) {
-                            console.error("Error occurred while waiting:", error)
+                            console.error("Error occurred while waiting:", error.name)
                         }                                                   
                         
                     }
@@ -293,8 +293,8 @@ function Job() {
         }
 
         getSixtyDaysLoans()    
-        .then(getPMLPrice)
-        .then(iterateloanoffers)   
+        // .then(getPMLPrice)
+        // .then(iterateloanoffers)   
         .then(function () {
             console.log("Done")
         })
