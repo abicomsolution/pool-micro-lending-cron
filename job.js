@@ -52,31 +52,44 @@ function Job() {
         let pmlprice = 0
 
         const getSixtyDaysLoans= function(){
-            return new Promise(function(resolve, reject) {          
-                Offer.find({ispaid: true, hasRebate: false})
-                .populate("member_id")              
-                .populate("borrower_id")        
-                .then((result) => {
+            return new Promise(async function(resolve, reject) {          
+                let result = await Offer.find({ispaid: true, hasRebate: false}).populate("member_id").populate("borrower_id")        
+                console.log("Total paid loans: " + result.length)     
 
-                    console.log("Total paid loans: " + result.length)            
-
-                    async.eachSeries(result, function (e, next) {
-                     
-                        var now = moment(new Date())
-                        var datel = moment(e.borrowed_at)
-                        var duration = moment.duration(now.diff(datel));
-                        var days = duration.asDays();
-                        // console.log("Loan Ref#: " + e.refno + " Borrower: " + e.member_id.fullname + " Days: " + days + " Date Loaned: " + moment(e.borrowed_at).format("YYYY-MM-DD") )
-                        if (days>=60) {
-                           loanoffers.push(e)
-                        }
-
-                        next()
-                    }, function () {
-                        console.log("Total 60 days loans: " + loanoffers.length)
-                        resolve()
-                    })                  
-                })
+                for (const e of result) {
+                    var now = moment(new Date())
+                    var datel = moment(e.borrowed_at)
+                    var duration = moment.duration(now.diff(datel));
+                    var days = duration.asDays();                             
+                    // console.log("Loan Ref#: " + e.refno + " Borrower: " + e.member_id.fullname + " Days: " + days + " Date Loaned: " + moment(e.borrowed_at).format("YYYY-MM-DD") )
+                    if (days>=60) {                                                                                                   
+                        try {
+                            let url = "http://localhost:5173/api/check-status/"+ e.borrower_id.walletaddress 
+                            // console.log(url)
+                            let res = await axios.get(url)
+                            if (res.data && res.data.status == 1) {                              
+                                if (res.data.data && res.data.data.isSuspended) {
+                                    console.log("Suspended in PF: " + e.borrower_id.walletaddress)                                         
+                                }else if (res.data.data && !res.data.data.isVerified) {
+                                    console.log("Not verified in PF: " + e.borrower_id.walletaddress)                                         
+                                }else if (res.data.data && !res.data.data.isTusted) {
+                                    console.log("Not isTrusted in PF: " + e.borrower_id.walletaddress)                                         
+                                }else{                                    
+                                    // console.log("Loan Ref#: " + e.refno + " Borrower: " + e.borrower_id.fullname + " address: " + e.borrower_id.walletaddress + " Date Loaned: " + moment(e.borrowed_at).format("YYYY-MM-DD"))            
+                                    loanoffers.push(e)
+                                }                                    
+                            }else{
+                                console.log("Not found in PF: " + e.borrower_id.walletaddress)                                  
+                            }   
+                            await new Promise(resolve => setTimeout(resolve, 1000))                                             
+                        } catch (error) {
+                            console.error("Error occurred while waiting:", error)
+                        }                                                   
+                        
+                    }
+                }
+                console.log("Total 60 days loans: " + loanoffers.length)
+                resolve()
             })
         }
 
@@ -117,6 +130,7 @@ function Job() {
     async function saveAndSendRebate(data, pmlprice, cb) {
 
         // console.log("saveAndSendRebate.....")
+        // cb()
 
         try {
 
