@@ -20,7 +20,7 @@ mongoose.connect(config.mongoURL, { useNewUrlParser: true })
     console.log(error)
 })
 
-// job.runGuarantees()
+job.runGuarantees()
 // job.updateRebates()
 // job.updateLoans()
 // job.updateAccessFee()

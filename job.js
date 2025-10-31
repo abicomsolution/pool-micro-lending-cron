@@ -121,11 +121,7 @@ function Job() {
 
         let whales = []
         let pmlprice = 0
-        let pfiprice = 0
-        let pfbprice = 0
-        let pfsprice = 0
-        let pfgprice = 0
-
+      
         const getWhales = function(){
             return new Promise(function(resolve, reject) {          
                 Member.find({walletaddress: {$in: whitelist.map(addr => new RegExp(`^${addr}$`, 'i'))}})
@@ -150,57 +146,14 @@ function Job() {
             })
         }            
 
-        const getPFIPrice= function(){
-            return new Promise(function(resolve, reject) {          
-                pullPFIPrice((price)=>{                
-                    pfiprice = price
-                    resolve()
-                })    
-            })
-        }     
-
-        const getPFBPrice= function(){
-            return new Promise(function(resolve, reject) {          
-                pullPFBPrice((price)=>{                
-                    pfbprice = price
-                    resolve()
-                })    
-            })
-        }
-
-        const getPFSPrice= function(){
-            return new Promise(function(resolve, reject) {          
-                pullPFSPrice((price)=>{                
-                    pfsprice = price
-                    resolve()
-                })    
-            })
-        }
-
-        const getPFGPrice= function(){
-            return new Promise(function(resolve, reject) {          
-                pullPFGPrice((price)=>{                
-                    pfgprice = price
-                    resolve()
-                })    
-            })
-        }
+        
 
         const updateLoans = function(){
             return new Promise(async function(resolve, reject) {          
                 let loans = []
                 let totall = 0
-                let totalpml = 0
-                let totalpfi = 0
-                let totalpfs = 0
-                let totalpfb = 0
-                let totalpfg = 0
-
-                let countpml = 0
-                let countpfi = 0
-                let countpfs = 0
-                let countpfb = 0
-                let countpfg = 0
+                let totalpml = 0                
+                let countpml = 0              
 
                 for (const e of whales) {               
                     let offers = await Offer.find({member_id: e._id, status: 0}).populate("member_id").populate("borrower_id")        
@@ -212,34 +165,14 @@ function Job() {
                 let ctr = 0
                 async.eachSeries(loans, function (e, next) {                     
                     ctr += 1                            
-                    guaranteeLoan(e, pmlprice, pfiprice, pfbprice, pfsprice, pfgprice, function(retType){                    
-                        if (retType.collateraltype == 1) {
-                            // console.log(retType)
-                            countpml += 1
-                            totalpml += Number(retType.amount)                         
-                            // console.log(totalpml)
-                        }else if (retType.collateraltype==0 && retType.cointtype == 0) {
-                            countpfi += 1
-                            totalpfi += Number(retType.amount)
-                        }else if (retType.collateraltype==0 && retType.cointtype == 1) {
-                            countpfb += 1
-                            totalpfb += Number(retType.amount)
-                        }else if (retType.collateraltype==0 && retType.cointtype == 2) {
-                            countpfs += 1
-                            totalpfs += Number(retType.amount)                   
-                        }else if (retType.collateraltype==0 && retType.cointtype == 3) {
-                            countpfg += 1
-                            totalpfg += Number(retType.amount)
-                        }   
+                    guaranteeLoan(e, pmlprice, function(amount){                    
+                        countpml += 1
+                        totalpml += Number(amount)                   
                         next()
                     })      
                 }, function () {
                     console.log("Total open loans for guarantee: " + ctr)
-                    console.log("Total PML collateral needed: " + countpml + " (" + roundToTwo(totalpml) + " PML)")
-                    console.log("Total PFI collateral needed: " + countpfi + " (" + roundToTwo(totalpfi) + " PFI)")
-                    console.log("Total PFB collateral needed: " + countpfb + " (" + roundToTwo(totalpfb) + " PFB)")
-                    console.log("Total PFS collateral needed: " + countpfs + " (" + roundToTwo(totalpfs) + " PFS)")
-                    console.log("Total PFG collateral needed: " + countpfg + " (" + roundToTwo(totalpfg) + " PFG)")
+                    console.log("Total PML collateral needed: " + countpml + " (" + roundToTwo(totalpml) + " PML)")                    
                     console.log("Total open loans for whales: " + totall)
                     resolve()
                 })                                
@@ -247,11 +180,7 @@ function Job() {
         }
 
         getWhales()
-        .then(getPMLPrice)
-        .then(getPFIPrice)
-        .then(getPFBPrice)
-        .then(getPFSPrice)
-        .then(getPFGPrice)
+        .then(getPMLPrice)       
         .then(updateLoans)
         .then(function () {
             console.log("Done updating guarantees")
@@ -263,136 +192,32 @@ function Job() {
     }
     
 
-    async function guaranteeLoan(data, pmlprice, pfiprice, pfbprice, pfsprice, pfgprice, cb) {
+    async function guaranteeLoan(data, pmlprice, cb) {
         
-        let retType = {
-            collateraltype: 0,
-            cointtype: 0,
-            amount: 0
-        }
+       let amount = 0
            
         try{
-
-            if (data.member_id.collateralpayment==1){
-                // console.log("Loan Ref#: " + data.refno + " Lender: " + data.member_id.fullname + "(" + data.member_id.walletaddress + ")")                       
-                // console.log("pml -> " + retType.amount)          
-                sendPMLTokens(data, pmlprice,  function(txhash){                             
-                    let params = {
-                        status: 4,
-                        ispaid: true,
-                        pay_pml_txhash: txhash,                          
-                        paid_at: moment().toDate()       
-                    }
-                    Offer.findByIdAndUpdate(data._id, params)
-                    .then(()=>{
-                        retType.collateraltype = 1
-                        retType.amount =  100 / pmlprice
-                        cb(retType)
-                    })
-                    .catch((err)=>{ 
-                        console.log(err)    
-                        cb(retType)
-                    })
-                })                        
-            }else if (data.member_id.collateralpayment==0){
-                
-                if (data.collateral_token_type==3) {                               
-                    // console.log("pfg -> " + retType.amount)                              
-                    sendPFGTokens(data, pfgprice,  function(txhash){               
-                        let params = {
-                            status: 4,
-                            ispaid: true,
-                             pay_pml_txhash: txhash,               
-                            paid_at: moment().toDate()       
-                        }
-                        Offer.findByIdAndUpdate(data._id, params)
-                        .then(()=>{
-                            retType.collateraltype = 0
-                            retType.cointtype = 3
-                            retType.amount =  100 / pfgprice      
-                            cb(retType)
-                        })
-                        .catch((err)=>{ 
-                            console.log(err)    
-                            cb(retType)
-                        })
-                    })                   
-                }else if (data.collateral_token_type==2) {
-                    // PFS                                                
-                    sendPFSTokens(data, pfsprice,  function(txhash){               
-                        let params = {
-                            status: 4,
-                            ispaid: true,
-                             pay_pml_txhash: txhash,               
-                            paid_at: moment().toDate()       
-                        }
-                        Offer.findByIdAndUpdate(data._id, params)
-                        .then(()=>{
-                            retType.collateraltype = 0
-                            retType.cointtype = 2
-                            retType.amount =  100 / pfsprice      
-                            cb(retType)
-                        })
-                        .catch((err)=>{ 
-                            console.log(err)    
-                            cb(retType)
-                        })               
-                    })       
-                }else if (data.collateral_token_type==1) {
-                    // console.log("PFB")                   
-                    sendPFBTokens(data, pfbprice,  function(txhash){               
-                        let params = {
-                            status: 4,
-                            ispaid: true,
-                            pay_pml_txhash: txhash,               
-                            paid_at: moment().toDate()       
-                        }
-                        Offer.findByIdAndUpdate(data._id, params)
-                        .then(()=>{
-                            retType.collateraltype = 0
-                            retType.cointtype = 1
-                            retType.amount =  100 / pfbprice     
-                            cb(retType)
-                        })
-                        .catch((err)=>{ 
-                            console.log(err)    
-                            cb(retType)
-                        })               
-                    })     
-                
-                }else if (data.collateral_token_type==0) {
-                    // PFI                                                     
-                    sendPFITokens(data, pfiprice,  function(txhash){   
-                        // cb()            
-                        let params = {
-                            status: 4,
-                            ispaid: true,
-                            pay_pml_txhash: txhash,                            
-                            paid_at: moment().toDate()       
-                        }
-                        Offer.findByIdAndUpdate(data._id, params)
-                        .then(()=>{
-                            retType.collateraltype = 0
-                            retType.cointtype = 0
-                            retType.amount =  100 / pfiprice      
-                            cb(retType)
-                        })
-                        .catch((err)=>{ 
-                            console.log(err)    
-                            cb(retType)
-                        })                
-                    })                                    
-                }else{
-                    console.log("----------------none-----------")
-                    cb(retType)        
-                }                              
-            }else{
-                cb(retType)
-            }      
+            sendPMLTokens(data, pmlprice,  function(txhash){                             
+                let params = {
+                    status: 4,
+                    ispaid: true,
+                    pay_pml_txhash: txhash,                          
+                    paid_at: moment().toDate()       
+                }
+                Offer.findByIdAndUpdate(data._id, params)
+                .then(()=>{
+                    amount = 100 / pmlprice
+                    cb(amount)
+                })
+                .catch((err)=>{ 
+                    console.log(err)    
+                    cb(0)
+                })
+            })          
 
         }catch(err){
             console.log(err)
-            cb(retType)
+            cb(0)
         }       
     }
 
@@ -904,7 +729,8 @@ function Job() {
                  
         let pmltokens =  100 / pmlprice   
         // console.log("pml tokens: " + pmltokens)             
-        // cb()
+        console.log("Loan Ref#: " + data.refno + " Lender: " + data.member_id.fullname + "(" + data.member_id.walletaddress + ")")  
+        // cb("")
         let amtStr = stripExcessDecimals(pmltokens)           
         if (Number(amtStr) > 0) {
             var bgamount = parseEther(amtStr)
@@ -917,8 +743,7 @@ function Job() {
             .then((tx)=>{
                 tx.wait(1)
                 .then((receipt)=>{
-                    // console.log(receipt.hash)
-                    // console.log("Loan Ref#: " + data.refno + " Lender: " + data.member_id.fullname + "(" + data.member_id.walletaddress + ")  Borrower: " + data.borrower_id.fullname + "(" + data.borrower_id.walletaddress + ") Date Loaned: " + moment(data.borrowed_at).format("YYYY-MM-DD")  + " payme: " + data.member_id.collateralpayment)
+                    // console.log(receipt.hash)                  
                     cb(receipt.hash)                            
                 })
                 .catch((err)=>{
