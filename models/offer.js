@@ -26,4 +26,11 @@ const offerSchema = new Schema({
 
 module.exports = mongoose.model('offer', offerSchema);
 
+//status
+// 0 - Open
+// 1 - Active
+// 2 - Default
+// 3 - Paid
+// 4 - Guarantee Paid
+
 
