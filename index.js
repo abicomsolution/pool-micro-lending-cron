@@ -21,7 +21,7 @@ mongoose.connect(config.mongoURL, { useNewUrlParser: true })
 })
 
 // job.runGuarantees()
-job.updateRebates()
+// job.updateRebates()
 // job.updateLoans()
 // job.updateAccessFee()
 
