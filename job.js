@@ -1,6 +1,7 @@
 const Member = require("./models/member")
 const Offer = require("./models/offer")
 const Accessfee = require("./models/accessfee")
+const Whitelist = require("./models/whitelist")
 const _ = require("lodash")
 const async = require("async")
 const moment = require("moment")
@@ -605,6 +606,26 @@ function Job() {
             console.log(err)            
         })
 
+
+    }
+
+
+    this.updateWhitelist = async function () {      
+
+        const wl = require("./wl.json")
+
+        await Whitelist.deleteMany({})
+
+        for (const w of wl) {
+            let params = {
+                member_id: w.member_id ? new ObjectId(w.member_id) : null,
+                walletaddress: w.walletaddress,
+                status: w.status
+            }
+            let nw = new Whitelist(params)
+            await nw.save()
+            console.log("Added to whitelist: " + w.walletaddress)
+        }
 
     }
 
