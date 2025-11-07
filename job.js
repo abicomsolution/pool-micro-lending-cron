@@ -2,6 +2,7 @@ const Member = require("./models/member")
 const Offer = require("./models/offer")
 const Accessfee = require("./models/accessfee")
 const Whitelist = require("./models/whitelist")
+const Gcode = require("./models/gcode")
 const _ = require("lodash")
 const async = require("async")
 const moment = require("moment")
@@ -558,6 +559,47 @@ function Job() {
             console.log("Added to whitelist: " + w.walletaddress)
         }
 
+    }
+
+    this.saveGcodes = async function () {        
+
+        const g1 = require("./gcodes/gcodes_1.json");
+        const g2 = require("./gcodes/gcodes_2.json");
+        const g3 = require("./gcodes/gcodes_3.json");
+        const g4 = require("./gcodes/gcodes_4.json");
+        const g5 = require("./gcodes/gcodes_5.json");
+        const g6 = require("./gcodes/gcodes_6.json");
+        const g7 = require("./gcodes/gcodes_7.json");
+        const g8 = require("./gcodes/gcodes_8.json");
+        const g9 = require("./gcodes/gcodes_9.json");
+        const g10 = require("./gcodes/gcodes_10.json");
+        const g11 = require("./gcodes/gcodes_11.json");
+        const g12 = require("./gcodes/gcodes_12.json");
+        const g13 = require("./gcodes/gcodes_13.json");
+        const g14 = require("./gcodes/gcodes_14.json");
+        const g15 = require("./gcodes/gcodes_15.json");
+        const g16 = require("./gcodes/gcodes_16.json");
+        const g17 = require("./gcodes/gcodes_17.json");
+        const g18 = require("./gcodes/gcodes_18.json");
+        const g19 = require("./gcodes/gcodes_19.json");
+        const g20 = require("./gcodes/gcodes_20.json");
+
+        const lists = [].concat(g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13, g14, g15, g16, g17, g18, g19, g20)
+
+        let insertParams = []
+        
+        lists.forEach(code => {           
+            insertParams.push({
+                id: code.id,
+                code: code.code,
+                used: false
+            })
+        })
+        
+        await Gcode.insertMany(insertParams)
+        
+        console.log("Gcodes inserted successfully! Total codes to insert: " + insertParams.length)
+      
     }
 
     async function autoPayBack(data, pmlprice, pfiprice, pfbprice, pfsprice, pfgprice, cb) {
