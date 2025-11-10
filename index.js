@@ -20,6 +20,8 @@ mongoose.connect(config.mongoURL, { useNewUrlParser: true })
     console.log(error)
 })
 
+job.cancelOffers()
+// job.generateBatchWhitelist()
 // job.saveGcodes()
 // job.updateWhitelist()
 // job.runGuarantees()

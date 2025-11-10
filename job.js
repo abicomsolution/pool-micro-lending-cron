@@ -561,6 +561,55 @@ function Job() {
 
     }
 
+
+     this.generateBatchWhitelist = async function () {      
+
+        const wl = require("./wl.json")
+
+        let whitelistEntries = []
+
+        for (const w of wl) {
+            let params = {                
+                useraddress: w.walletaddress,
+                bstat: true
+            }
+            whitelistEntries.push(params)
+        }
+        try {
+            const jsonData = JSON.stringify(whitelistEntries, null, 2);
+            fs.writeFileSync('./whitelist_entries.json', jsonData, 'utf8');
+            console.log(`Saved ${whitelistEntries.length} whitelist entries to whitelist_entries.json`);
+        } catch (error) {
+            console.error('Error saving whitelist entries to JSON:', error);
+        }
+    }
+
+    this.cancelOffers = async function () {      
+
+        let result = await Offer.find({member_id: "689eca8c5858ddb1dd8052a7", status: 0}).populate("member_id")
+
+        console.log("Total offers to cancel: " + result.length)
+
+        for (const offer of result) {
+            // console.log("Cancelling offer for: " + offer.member_id.fullname + " Ref#: " + offer.refno + " date: " + moment(offer.transdate).format("YYYY-MM-DD"))
+
+            const PK = process.env.SENDER_PK
+            const cwallet = new ethers.Wallet(PK, customHttpProvider)              
+            const pmlContract = new ethers.Contract(PMLContractConfig.address, PMLContractConfig.abi, customHttpProvider);
+            let pmltokens = 0.00010315924653
+            let amtStr = stripExcessDecimals(pmltokens) 
+            var bgamount = parseEther(amtStr)            
+            let receiver =  offer.member_id.walletaddress          
+            let tx = await pmlContract.connect(cwallet).transfer(receiver, bgamount)            
+            tx.wait(1)        
+            console.log(tx.hash)
+            await Offer.findByIdAndDelete(offer._id)
+            console.log("Cancelled offer for: " + offer.member_id.fullname + " Ref#: " + offer.refno + " date: " + moment(offer.transdate).format("YYYY-MM-DD") + " amount: " + bgamount.toString() + " receiver: " + receiver) 
+            break;
+        }
+
+    }
+
     this.saveGcodes = async function () {        
 
         const g1 = require("./gcodes/gcodes_1.json");
