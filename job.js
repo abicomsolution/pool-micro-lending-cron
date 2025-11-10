@@ -605,7 +605,7 @@ function Job() {
             console.log(tx.hash)
             await Offer.findByIdAndDelete(offer._id)
             console.log("Cancelled offer for: " + offer.member_id.fullname + " Ref#: " + offer.refno + " date: " + moment(offer.transdate).format("YYYY-MM-DD") + " amount: " + bgamount.toString() + " receiver: " + receiver) 
-            break;
+            // break;
         }
 
     }
