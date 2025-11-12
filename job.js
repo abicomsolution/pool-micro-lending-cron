@@ -50,13 +50,30 @@ function Job() {
 
     this.runGuarantees = async function () {   
 
+        let whitelist = []
         let whales = []
         let pmlprice = 0
 
-        let whitelist = require("./whitelist.json")
+        // let whitelist = require("./whitelist.json")
+
+        const getWhitelist = function(){
+            return new Promise(function(resolve, reject) {          
+                Whitelist.find({status: 1})
+                .then((result) => {
+                    whitelist = result.map(w => w.walletaddress)
+                    console.log("Total whitelist addresses: " + whitelist.length)
+                    resolve()
+                })
+                .catch((err) => {
+                    console.log(err)
+                    reject(err)
+                })
+            })
+        }
       
         const getWhales = function(){
-            return new Promise(function(resolve, reject) {          
+            return new Promise(function(resolve, reject) {  
+                console.log(whitelist)        
                 Member.find({walletaddress: {$in: whitelist.map(addr => new RegExp(`^${addr}$`, 'i'))}})
                 .then((result) => {
                     whales = result
@@ -112,7 +129,8 @@ function Job() {
             })
         }
 
-        getWhales()
+        getWhitelist()
+        .then(getWhales)
         .then(getPMLPrice)       
         .then(updateLoans)
         .then(function () {
