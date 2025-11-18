@@ -19,7 +19,7 @@ const PFSContractConfig = require("./pfsAbi")
 const PFGContractConfig = require("./pfgAbi")
 const pairCon = require("./pairCon.json")
 const Rebates = require("./models/rebates")
-const { type } = require("os")
+const GuaranteeContractConfig = require("./guaranteeAbi")
 
 var customHttpProvider = new JsonRpcProvider("https://bsc-dataseed.binance.org");
 
@@ -630,26 +630,26 @@ function Job() {
 
     this.saveGcodes = async function () {        
 
-        const g1 = require("./gcodes/gcodes_1.json");
-        const g2 = require("./gcodes/gcodes_2.json");
-        const g3 = require("./gcodes/gcodes_3.json");
-        const g4 = require("./gcodes/gcodes_4.json");
-        const g5 = require("./gcodes/gcodes_5.json");
-        const g6 = require("./gcodes/gcodes_6.json");
-        const g7 = require("./gcodes/gcodes_7.json");
-        const g8 = require("./gcodes/gcodes_8.json");
-        const g9 = require("./gcodes/gcodes_9.json");
-        const g10 = require("./gcodes/gcodes_10.json");
-        const g11 = require("./gcodes/gcodes_11.json");
-        const g12 = require("./gcodes/gcodes_12.json");
-        const g13 = require("./gcodes/gcodes_13.json");
-        const g14 = require("./gcodes/gcodes_14.json");
-        const g15 = require("./gcodes/gcodes_15.json");
-        const g16 = require("./gcodes/gcodes_16.json");
-        const g17 = require("./gcodes/gcodes_17.json");
-        const g18 = require("./gcodes/gcodes_18.json");
-        const g19 = require("./gcodes/gcodes_19.json");
-        const g20 = require("./gcodes/gcodes_20.json");
+        const g1 = require("./gcodes/gcodes_21.json");
+        const g2 = require("./gcodes/gcodes_22.json");
+        const g3 = require("./gcodes/gcodes_23.json");
+        const g4 = require("./gcodes/gcodes_24.json");
+        const g5 = require("./gcodes/gcodes_25.json");
+        const g6 = require("./gcodes/gcodes_26.json");
+        const g7 = require("./gcodes/gcodes_27.json");
+        const g8 = require("./gcodes/gcodes_28.json");
+        const g9 = require("./gcodes/gcodes_29.json");
+        const g10 = require("./gcodes/gcodes_30.json");
+        const g11 = require("./gcodes/gcodes_31.json");
+        const g12 = require("./gcodes/gcodes_32.json");
+        const g13 = require("./gcodes/gcodes_33.json");
+        const g14 = require("./gcodes/gcodes_34.json");
+        const g15 = require("./gcodes/gcodes_35.json");
+        const g16 = require("./gcodes/gcodes_36.json");
+        const g17 = require("./gcodes/gcodes_37.json");
+        const g18 = require("./gcodes/gcodes_38.json");
+        const g19 = require("./gcodes/gcodes_39.json");
+        const g20 = require("./gcodes/gcodes_40.json");
 
         const lists = [].concat(g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13, g14, g15, g16, g17, g18, g19, g20)
 
@@ -667,6 +667,36 @@ function Job() {
         
         console.log("Gcodes inserted successfully! Total codes to insert: " + insertParams.length)
       
+    }
+
+
+    this.checkGCodes = async function () {        
+
+        const PK =  process.env.OWNER_PK
+        const cwallet = new ethers.Wallet(PK, customHttpProvider)              
+        const wpContract = new ethers.Contract(GuaranteeContractConfig.address, GuaranteeContractConfig.abi, customHttpProvider);
+
+        let gccodes = await Gcode.find()
+        
+        let ctr = 0
+        let usedCtr = 0
+        // for (const gc of gccodes) {
+        //     let isused = await wpContract.connect(cwallet).getSwapCode(gc.code)     
+        //     console.log(isused[2])
+        //     console.log("Gcode: " + gc.code + " isused: " + isused[2])
+        //     if (isused[2]){
+        //         usedCtr = usedCtr + 1
+        //     }
+        //     ctr = ctr + 1            
+        // }
+
+        const filterUsed = gccodes.filter(g => g.used)
+        console.log("Total used Gcodes in DB: " + filterUsed.length )
+
+        console.log("Total DB:" + gccodes.length + ", Total Gcodes checked: " + ctr + " Used codes: " + usedCtr)
+
+
+
     }
 
     async function autoPayBack(data, pmlprice, pfiprice, pfbprice, pfsprice, pfgprice, cb) {

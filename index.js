@@ -22,12 +22,14 @@ mongoose.connect(config.mongoURL, { useNewUrlParser: true })
 
 // job.cancelOffers()
 // job.generateBatchWhitelist()
-// job.saveGcodes()
+job.saveGcodes()
 // job.updateWhitelist()
-job.runGuarantees()
+// job.runGuarantees()
 // job.updateRebates()
 // job.updateLoans()
 // job.updateAccessFee()
+
+// job.checkGCodes()
 
 // new CronJob('*/30 * * * * *', function () {   
 //  console.log('Top 50 holders updated at ' + moment().format('YYYY-MM-DD HH:mm:ss'));
