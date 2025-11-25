@@ -48,6 +48,100 @@ function roundToTwo(num) {
 
 function Job() {
 
+       this.runNonWhaleGuarantees = async function () {   
+
+        let opeloans = []     
+        let qloans = [] 
+        let pmlprice = 0    
+
+        const getOpenloans = function(){
+            return new Promise(function(resolve, reject) {          
+                Offer.find({ status: 0}).populate("member_id").populate("borrower_id").sort({transdate: 1})   
+                .then((result) => {                    
+                    console.log("Total open loans: " + result.length)     
+                    opeloans = result                                 
+                    resolve()
+                })
+
+            })
+        }
+      
+    
+
+        const getPMLPrice= function(){
+            return new Promise(function(resolve, reject) {          
+                pullPMLPrice((price)=>{                
+                    pmlprice = price
+                    resolve()
+                })    
+            })
+        }            
+
+        const filterQualified = function(){
+            return new Promise(async function(resolve, reject) {      
+                for (const e of opeloans) {                                 
+                    try{
+                        let url = "https://poolfunding.io/api/check-status/"+ e.member_id.walletaddress
+                        console.log(url)
+                        let res = await axios.get(url)
+                        if (res.data && res.data.status == 1) {                              
+                            if (res.data.data && res.data.data.isSuspended) {
+                                console.log("Suspended in PF: " + e.member_id.walletaddress)                                                             
+                            }else if (res.data.data && !res.data.data.isVerified) {
+                                console.log("Not verified in PF: " + e.member_id.walletaddress)                                                                                                         
+                            }else if (res.data.data && !res.data.data.isTusted) {
+                                console.log("Not isTrusted in PF: " + e.member_id.walletaddress)                                                                                                          
+                            }else{  
+                                console.log("count:" + qloans.length)                                                                                              
+                                qloans.push(e)                            
+                                if (qloans.length==300){
+                                    break;                                    
+                                }
+                            }                                    
+                        }else{
+                            console.log("Not found in PF: " + e.member_id.walletaddress)                                                              
+                        }                                                   
+                    }catch(err){
+                        console.error("Error occurred while waiting:", err.name)
+                    }                    
+                }                       
+                resolve()                      
+            })
+        }
+
+        const updateLoans = function(){
+            return new Promise(async function(resolve, reject) {                                          
+                let totalpml = 0                
+                let countpml = 0                                              
+                async.eachSeries(qloans, function (e, next) {                                                              
+                    console.log("Processing Loan Ref#: " + e.refno + " Borrower: " + e.member_id.fullname + " address: " + e.member_id.walletaddress + " Date : " + moment(e.transdate).format("YYYY-MM-DD"))
+                    guaranteeLoan(e, pmlprice, function(amount){                    
+                        countpml += 1
+                        totalpml += Number(amount)                   
+                        next()
+                    })      
+                }, function () {
+                    console.log("Total open loans for guarantee: " + qloans.length)
+                    console.log("Total PML collateral needed: " + countpml + " (" + roundToTwo(totalpml) + " PML)")                                      
+                    resolve()
+                })                                
+            })
+        }
+
+        getOpenloans()   
+        .then(filterQualified)    
+        .then(getPMLPrice)       
+        .then(updateLoans)
+        .then(function () {
+            console.log("Done updating guarantees")
+        })
+        .catch(function(err){
+            console.log(err)            
+        })
+
+    }
+    
+
     this.runGuarantees = async function () {   
 
         let whitelist = []
@@ -145,8 +239,7 @@ function Job() {
 
     async function guaranteeLoan(data, pmlprice, cb) {
         
-       let amount = 0
-           
+        let amount = 0      
         try{
             sendPMLTokens(data, pmlprice,  function(txhash){                             
                 let params = {
