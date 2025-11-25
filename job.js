@@ -48,7 +48,7 @@ function roundToTwo(num) {
 
 function Job() {
 
-       this.runNonWhaleGuarantees = async function () {   
+    this.runNonWhaleGuarantees = async function () {   
 
         let opeloans = []     
         let qloans = [] 
@@ -337,8 +337,8 @@ function Job() {
         }
 
         getSixtyDaysLoans()    
-        // .then(getPMLPrice)
-        // .then(iterateloanoffers)   
+        .then(getPMLPrice)
+        .then(iterateloanoffers)   
         .then(function () {
             console.log("Done")
         })
@@ -467,11 +467,40 @@ function Job() {
                         var duration = moment.duration(now.diff(datel));
                         var days = duration.asDays();                       
                         if (days>=30) {
-                           console.log("Loan Ref#: " + e.refno + " Borrower: " + e.member_id.fullname + " Days: " + days + " Date Loaned: " + moment(e.borrowed_at).format("YYYY-MM-DD") )
-                           defaultLoans.push(e)
-                        }                        
-                        next()
+                            let url = "https://poolfunding.io/api/check-status/"+ e.member_id.walletaddress
+                            console.log(url)
+                            axios.get(url)
+                            .then((res) => {
+
+                                if (res.data && res.data.status == 1) {                              
+                                    if (res.data.data && res.data.data.isSuspended) {
+                                        console.log("Suspended in PF: " + e.member_id.walletaddress)                                                             
+                                        next()
+                                    }else if (res.data.data && !res.data.data.isVerified) {
+                                        console.log("Not verified in PF: " + e.member_id.walletaddress)                                                                                                         
+                                        next()
+                                    }else if (res.data.data && !res.data.data.isTusted) {
+                                        console.log("Not isTrusted in PF: " + e.member_id.walletaddress)                                                                                                          
+                                        next()
+                                    }else{  
+                                        console.log("Loan Ref#: " + e.refno + " Borrower: " + e.member_id.fullname + " Days: " + days + " Date Loaned: " + moment(e.borrowed_at).format("YYYY-MM-DD") )
+                                        defaultLoans.push(e)
+                                        next()
+                                    }                                    
+                                }else{
+                                    console.log("Not found in PF: " + e.member_id.walletaddress)                                                              
+                                    next()
+                                }      
+
+                            }).catch((err) => {
+                                next()
+                            })                          
+                        }else{
+                            next()
+                        }                       
+                      
                     }, function () {
+                        console.log("Total default loans: " + defaultLoans.length)
                         resolve()
                     })                  
                 })
