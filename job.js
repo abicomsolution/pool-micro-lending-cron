@@ -752,26 +752,26 @@ function Job() {
 
     this.saveGcodes = async function () {        
 
-        const g1 = require("./gcodes/gcodes_21.json");
-        const g2 = require("./gcodes/gcodes_22.json");
-        const g3 = require("./gcodes/gcodes_23.json");
-        const g4 = require("./gcodes/gcodes_24.json");
-        const g5 = require("./gcodes/gcodes_25.json");
-        const g6 = require("./gcodes/gcodes_26.json");
-        const g7 = require("./gcodes/gcodes_27.json");
-        const g8 = require("./gcodes/gcodes_28.json");
-        const g9 = require("./gcodes/gcodes_29.json");
-        const g10 = require("./gcodes/gcodes_30.json");
-        const g11 = require("./gcodes/gcodes_31.json");
-        const g12 = require("./gcodes/gcodes_32.json");
-        const g13 = require("./gcodes/gcodes_33.json");
-        const g14 = require("./gcodes/gcodes_34.json");
-        const g15 = require("./gcodes/gcodes_35.json");
-        const g16 = require("./gcodes/gcodes_36.json");
-        const g17 = require("./gcodes/gcodes_37.json");
-        const g18 = require("./gcodes/gcodes_38.json");
-        const g19 = require("./gcodes/gcodes_39.json");
-        const g20 = require("./gcodes/gcodes_40.json");
+        const g1 = require("./gcodes/gcodes_41.json");
+        const g2 = require("./gcodes/gcodes_42.json");
+        const g3 = require("./gcodes/gcodes_43.json");
+        const g4 = require("./gcodes/gcodes_44.json");
+        const g5 = require("./gcodes/gcodes_45.json");
+        const g6 = require("./gcodes/gcodes_46.json");
+        const g7 = require("./gcodes/gcodes_47.json");
+        const g8 = require("./gcodes/gcodes_48.json");
+        const g9 = require("./gcodes/gcodes_49.json");
+        const g10 = require("./gcodes/gcodes_50.json");
+        const g11 = require("./gcodes/gcodes_51.json");
+        const g12 = require("./gcodes/gcodes_52.json");
+        const g13 = require("./gcodes/gcodes_53.json");
+        const g14 = require("./gcodes/gcodes_54.json");
+        const g15 = require("./gcodes/gcodes_55.json");
+        const g16 = require("./gcodes/gcodes_56.json");
+        const g17 = require("./gcodes/gcodes_57.json");
+        const g18 = require("./gcodes/gcodes_58.json");
+        const g19 = require("./gcodes/gcodes_59.json");
+        const g20 = require("./gcodes/gcodes_50.json");
 
         const lists = [].concat(g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13, g14, g15, g16, g17, g18, g19, g20)
 
