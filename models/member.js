@@ -17,7 +17,8 @@ const memberSchema = new Schema({
     collateralpayment : { type: Number, default: 0 },
     verified: { type: Boolean, default: false },
     photo: { type: "String", default: "" },
-    telegram: { type: "String", default: "" }
+    telegram: { type: "String", default: "" },
+    date_suspended: { type: Date, default: null },
 }, { toJSON: { virtuals: true } });
 
 

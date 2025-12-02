@@ -1380,6 +1380,32 @@ function Job() {
        
     }
 
+    this.updateSuspended = async function () {        
+
+        let members =  await Member.find()
+
+        let suspendedCount = 0
+        let notfound = 0
+     
+        for (const e of members) {               
+            let url = "https://poolfunding.io/api/check-status/"+ e.walletaddress          
+            let res = await axios.get(url)
+            if (res.data && res.data.status == 1) {                              
+                if (res.data.data && res.data.data.isSuspended) {
+                    console.log("Suspended in PF: " + e.walletaddress)    
+                    suspendedCount = suspendedCount + 1           
+                    await Member.findByIdAndUpdate(e._id, {status: 1, date_suspended: new Date()})                                                                                                                                                      
+                }
+            }else{
+                console.log("Not found in PF: " + e.walletaddress)      
+                notfound = notfound + 1    
+                await Member.findByIdAndUpdate(e._id, {status: 1, date_suspended: new Date()})                                                         
+            }    
+        }
+
+        console.log("Total suspended: " + suspendedCount + ", Not found: " + notfound)
+        console.log("Total members: " + members.length)
+    }
 }
 
 
