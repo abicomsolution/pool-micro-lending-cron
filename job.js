@@ -94,9 +94,9 @@ function Job() {
                             }else{  
                                 console.log("count:" + qloans.length)                                                                                              
                                 qloans.push(e)                            
-                                if (qloans.length==400){
-                                    break;                                    
-                                }
+                                // if (qloans.length==400){
+                                //     break;                                    
+                                // }
                             }                                    
                         }else{
                             console.log("Not found in PF: " + e.member_id.walletaddress)                                                              
