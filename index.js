@@ -20,18 +20,18 @@ mongoose.connect(config.mongoURL, { useNewUrlParser: true })
     console.log(error)
 })
 
-job.updateSuspended()
+// job.updateSuspended()
 //job.runNonWhaleGuarantees()
 // job.cancelOffers()
 // job.generateBatchWhitelist()
-// job.saveGcodes()
+job.saveGcodes()
 // job.updateWhitelist()
 // job.runGuarantees()
 // job.updateRebates()
 //  job.updateLoans()
 // job.updateAccessFee()
 
-// job.checkGCodes()
+//job.checkGCodes()
 
 
 

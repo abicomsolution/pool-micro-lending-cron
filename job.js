@@ -752,28 +752,39 @@ function Job() {
 
     this.saveGcodes = async function () {        
 
-        const g1 = require("./gcodes/gcodes_41.json");
-        const g2 = require("./gcodes/gcodes_42.json");
-        const g3 = require("./gcodes/gcodes_43.json");
-        const g4 = require("./gcodes/gcodes_44.json");
-        const g5 = require("./gcodes/gcodes_45.json");
-        const g6 = require("./gcodes/gcodes_46.json");
-        const g7 = require("./gcodes/gcodes_47.json");
-        const g8 = require("./gcodes/gcodes_48.json");
-        const g9 = require("./gcodes/gcodes_49.json");
-        const g10 = require("./gcodes/gcodes_50.json");
-        const g11 = require("./gcodes/gcodes_51.json");
-        const g12 = require("./gcodes/gcodes_52.json");
-        const g13 = require("./gcodes/gcodes_53.json");
-        const g14 = require("./gcodes/gcodes_54.json");
-        const g15 = require("./gcodes/gcodes_55.json");
-        const g16 = require("./gcodes/gcodes_56.json");
-        const g17 = require("./gcodes/gcodes_57.json");
-        const g18 = require("./gcodes/gcodes_58.json");
-        const g19 = require("./gcodes/gcodes_59.json");
-        const g20 = require("./gcodes/gcodes_50.json");
+        const g1 = require("./gcodes/gcodes_61.json");
+        const g2 = require("./gcodes/gcodes_62.json");
+        const g3 = require("./gcodes/gcodes_63.json");
+        const g4 = require("./gcodes/gcodes_64.json");
+        const g5 = require("./gcodes/gcodes_65.json");
+        const g6 = require("./gcodes/gcodes_66.json");
+        const g7 = require("./gcodes/gcodes_67.json");
+        const g8 = require("./gcodes/gcodes_68.json");
+        const g9 = require("./gcodes/gcodes_69.json");
+        const g10 = require("./gcodes/gcodes_70.json");
+        const g11 = require("./gcodes/gcodes_71.json");
+        const g12 = require("./gcodes/gcodes_72.json");
+        const g13 = require("./gcodes/gcodes_73.json");
+        const g14 = require("./gcodes/gcodes_74.json");
+        const g15 = require("./gcodes/gcodes_75.json");
+        const g16 = require("./gcodes/gcodes_76.json");
+        const g17 = require("./gcodes/gcodes_77.json");
+        const g18 = require("./gcodes/gcodes_78.json");
+        const g19 = require("./gcodes/gcodes_79.json");
+        const g20 = require("./gcodes/gcodes_80.json");
+        const g21 = require("./gcodes/gcodes_81.json");
+        const g22 = require("./gcodes/gcodes_82.json");
+        const g23 = require("./gcodes/gcodes_83.json");
+        const g24 = require("./gcodes/gcodes_84.json");
+        const g25 = require("./gcodes/gcodes_85.json");
+        const g26 = require("./gcodes/gcodes_86.json");
+        const g27 = require("./gcodes/gcodes_87.json");
+        const g28 = require("./gcodes/gcodes_88.json");
+        const g29 = require("./gcodes/gcodes_89.json");
+        const g30 = require("./gcodes/gcodes_90.json");
 
-        const lists = [].concat(g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13, g14, g15, g16, g17, g18, g19, g20)
+
+        const lists = [].concat(g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13, g14, g15, g16, g17, g18, g19, g20, g21, g22, g23, g24, g25, g26, g27, g28, g29, g30)
 
         let insertParams = []
         
@@ -802,15 +813,15 @@ function Job() {
         
         let ctr = 0
         let usedCtr = 0
-        // for (const gc of gccodes) {
-        //     let isused = await wpContract.connect(cwallet).getSwapCode(gc.code)     
-        //     console.log(isused[2])
-        //     console.log("Gcode: " + gc.code + " isused: " + isused[2])
-        //     if (isused[2]){
-        //         usedCtr = usedCtr + 1
-        //     }
-        //     ctr = ctr + 1            
-        // }
+        for (const gc of gccodes) {
+            let isused = await wpContract.connect(cwallet).getSwapCode(gc.code)     
+            console.log(isused[2])
+            console.log("Gcode: " + gc.code + " isused: " + isused[2])
+            if (isused[2]){
+                usedCtr = usedCtr + 1
+            }
+            ctr = ctr + 1            
+        }
 
         const filterUsed = gccodes.filter(g => g.used)
         console.log("Total used Gcodes in DB: " + filterUsed.length )
