@@ -290,17 +290,17 @@ function Job() {
                             let res = await axios.get(url)
                             if (res.data && res.data.status == 1) {                              
                                 if (res.data.data && res.data.data.isSuspended) {
-                                    console.log("Suspended in PF: " + e.borrower_id.walletaddress)                                         
+                                    console.log("Suspended in PF:")                                         
                                 }else if (res.data.data && !res.data.data.isVerified) {
-                                    console.log("Not verified in PF: " + e.borrower_id.walletaddress)                                         
+                                    console.log("Not verified in PF: ")                                         
                                 }else if (res.data.data && !res.data.data.isTusted) {
-                                    console.log("Not isTrusted in PF: " + e.borrower_id.walletaddress)                                         
+                                    console.log("Not isTrusted in PF: ")                                         
                                 }else{                                    
                                     console.log("Loan Ref#: " + e.refno + " Borrower: " + e.borrower_id.fullname + " address: " + e.borrower_id.walletaddress + " Date Loaned: " + moment(e.borrowed_at).format("YYYY-MM-DD"))            
                                     loanoffers.push(e)
                                 }                                    
                             }else{
-                                console.log("Not found in PF: " + e.borrower_id.walletaddress)                                  
+                                console.log("Not found in PF")                                  
                             }   
                             // await new Promise(resolve => setTimeout(resolve, 1000))                                             
                         } catch (error) {
@@ -474,21 +474,21 @@ function Job() {
 
                                 if (res.data && res.data.status == 1) {                              
                                     if (res.data.data && res.data.data.isSuspended) {
-                                        console.log("Suspended in PF: " + e.member_id.walletaddress)                                                             
+                                        console.log("Suspended in PF: ")                                                             
                                         next()
                                     }else if (res.data.data && !res.data.data.isVerified) {
-                                        console.log("Not verified in PF: " + e.member_id.walletaddress)                                                                                                         
+                                        console.log("Not verified in PF: ")                                                                                                         
                                         next()
                                     }else if (res.data.data && !res.data.data.isTusted) {
-                                        console.log("Not isTrusted in PF: " + e.member_id.walletaddress)                                                                                                          
+                                        console.log("Not isTrusted in PF: ")                                                                                                          
                                         next()
                                     }else{  
-                                        console.log("Loan Ref#: " + e.refno + " Borrower: " + e.member_id.fullname + " Days: " + days + " Date Loaned: " + moment(e.borrowed_at).format("YYYY-MM-DD") )
+                                        console.log("Loan Ref#: " + e.refno + " Borrower: " + e.member_id.fullname + " Days: " + days )
                                         defaultLoans.push(e)
                                         next()
                                     }                                    
                                 }else{
-                                    console.log("Not found in PF: " + e.member_id.walletaddress)                                                              
+                                    console.log("Not found in PF: ")                                                              
                                     next()
                                 }      
 
