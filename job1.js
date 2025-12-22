@@ -115,7 +115,7 @@ function Job1() {
         await tf.ready();
         const model = await blazeface.load();
       
-        let verified = await  Member.find({verified: true, _id: "68883042705b35e17c4be364"})
+        let verified = await  Member.find({verified: true})
 
         let bucket = process.env.AWS_BUCKET;
         let processed = 0;
