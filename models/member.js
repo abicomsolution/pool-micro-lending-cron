@@ -19,6 +19,7 @@ const memberSchema = new Schema({
     photo: { type: "String", default: "" },
     telegram: { type: "String", default: "" },
     date_suspended: { type: Date, default: null },
+    facephoto: { type: "String", default: "" },
 }, { toJSON: { virtuals: true } });
 
 

@@ -5,7 +5,7 @@ var moment = require('moment');
 var mongoose = require('mongoose')
 
 var job = require('./job');
-
+var job1 = require('./job1');
 const config = {
     mongoURL: process.env.DB,
     port: 6009
@@ -20,6 +20,9 @@ mongoose.connect(config.mongoURL, { useNewUrlParser: true })
     console.log(error)
 })
 
+
+job1.runFaceRecognition()
+
 // job.updateSuspended()
 //job.runNonWhaleGuarantees()
 // job.cancelOffers()
@@ -27,7 +30,7 @@ mongoose.connect(config.mongoURL, { useNewUrlParser: true })
 // job.saveGcodes()
 // job.updateWhitelist()
 // job.runGuarantees()
-job.updateRebates()
+// job.updateRebates()
 //  job.updateLoans()
 // job.updateAccessFee()
 
