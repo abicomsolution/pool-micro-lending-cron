@@ -23,13 +23,13 @@ mongoose.connect(config.mongoURL, { useNewUrlParser: true })
 
 // job.updateSuspended()
 
-job1.runFaceRecognition()
+// job1.runFaceRecognition()
 
 // job.updateSuspended()
 //job.runNonWhaleGuarantees()
 // job.cancelOffers()
 // job.generateBatchWhitelist()
-// job.saveGcodes()
+job.saveGcodes()
 // job.updateWhitelist()
 // job.runGuarantees()
 // job.updateRebates()
