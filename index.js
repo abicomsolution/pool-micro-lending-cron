@@ -21,6 +21,8 @@ mongoose.connect(config.mongoURL, { useNewUrlParser: true })
 })
 
 
+// job.updateSuspended()
+
 job1.runFaceRecognition()
 
 // job.updateSuspended()

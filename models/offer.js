@@ -3,7 +3,7 @@ const mongoose = require("mongoose")
 const Schema = mongoose.Schema;
 
 const offerSchema = new Schema({
-    member_id: { type: Schema.Types.ObjectId, ref: "member", default: null },
+   member_id: { type: Schema.Types.ObjectId, ref: "member", default: null },
     refno: { type: "String", default: "" },        
     transdate: { type: Date, default: null },            
     amount: { type: Number, default: 0 },    
@@ -19,9 +19,12 @@ const offerSchema = new Schema({
     paid_at: { type: Date, default: null },
     borrower_id: { type: Schema.Types.ObjectId, ref: "member", default: null },
     received_pml_tokens: { type: Number, default: 0 },       
-    pay_pml_txhash: { type: "String", default: "" },    
+    pay_pml_txhash: { type: "String", default: "" },
     pay_collateral_txhash: { type: "String", default: "" },
-    hasRebate: { type: Boolean, default: false }
+    hasRebate: { type: Boolean, default: false },
+    lender_photo: { type: "String", default: "" },
+    borrower_photo: { type: "String", default: "" },
+    payer_photo: { type: "String", default: "" }
 })
 
 module.exports = mongoose.model('offer', offerSchema);
