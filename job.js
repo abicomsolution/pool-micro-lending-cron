@@ -152,16 +152,20 @@ function Job() {
 
         const getWhitelist = function(){
             return new Promise(function(resolve, reject) {          
-                Whitelist.find({status: 1})
-                .then((result) => {
-                    whitelist = result.map(w => w.walletaddress)
-                    console.log("Total whitelist addresses: " + whitelist.length)
-                    resolve()
-                })
-                .catch((err) => {
-                    console.log(err)
-                    reject(err)
-                })
+
+                whitelist.push("0xde82acaeebe15fec29f5b14e37f74c4469960e18")
+                resolve()
+
+                // Whitelist.find({status: 1})
+                // .then((result) => {
+                //     whitelist = result.map(w => w.walletaddress)
+                //     console.log("Total whitelist addresses: " + whitelist.length)
+                //     resolve()
+                // })
+                // .catch((err) => {
+                //     console.log(err)
+                //     reject(err)
+                // })
             })
         }
       
@@ -171,6 +175,7 @@ function Job() {
                 Member.find({walletaddress: {$in: whitelist.map(addr => new RegExp(`^${addr}$`, 'i'))}})
                 .then((result) => {
                     whales = result
+                    console.log(whales)
                     console.log("Total whales found: " + whales.length + "/" + whitelist.length)
                     resolve()
                 })
@@ -225,8 +230,8 @@ function Job() {
 
         getWhitelist()
         .then(getWhales)
-        .then(getPMLPrice)       
-        .then(updateLoans)
+        // .then(getPMLPrice)       
+        // .then(updateLoans)
         .then(function () {
             console.log("Done updating guarantees")
         })
