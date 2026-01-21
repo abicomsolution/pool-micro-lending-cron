@@ -230,8 +230,8 @@ function Job() {
 
         getWhitelist()
         .then(getWhales)
-        // .then(getPMLPrice)       
-        // .then(updateLoans)
+        .then(getPMLPrice)       
+        .then(updateLoans)
         .then(function () {
             console.log("Done updating guarantees")
         })
