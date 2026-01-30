@@ -20,6 +20,8 @@ const memberSchema = new Schema({
     telegram: { type: "String", default: "" },
     date_suspended: { type: Date, default: null },
     facephoto: { type: "String", default: "" },
+    embedding: { type: [Number], required: true },
+    dims: { type: Number, required: true, index: true },
 }, { toJSON: { virtuals: true } });
 
 

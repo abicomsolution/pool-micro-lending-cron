@@ -56,11 +56,20 @@ function Job() {
 
         const getOpenloans = function(){
             return new Promise(function(resolve, reject) {          
-                Offer.find({ status: 0}).populate("member_id").populate("borrower_id").sort({transdate: 1})   
+                // Only get offers for the year 2025
+                const startOf2025 = new Date("2025-01-01T00:00:00.000Z");
+                const endOf2025 = new Date("2025-12-31T23:59:59.999Z");
+                Offer.find({ 
+                    status: 0,
+                    transdate: { $gte: startOf2025, $lte: endOf2025 }
+                })
+                .populate("member_id")
+                .populate("borrower_id")
+                .sort({ transdate: 1 })
                 .then((result) => {                    
-                    console.log("Total open loans: " + result.length)     
-                    opeloans = result                                 
-                    resolve()
+                    console.log("Total open loans in 2025: " + result.length);     
+                    opeloans = result;                                 
+                    resolve();
                 })
 
             })
