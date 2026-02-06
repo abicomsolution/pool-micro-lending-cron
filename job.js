@@ -749,27 +749,34 @@ function Job() {
 
     this.cancelOffers = async function () {      
 
-        let result = await Offer.find({member_id: "689eca8c5858ddb1dd8052a7", status: 0}).populate("member_id")
+        // let result = await Offer.find({member_id: "689eca8c5858ddb1dd8052a7", status: 0}).populate("member_id")
 
-        console.log("Total offers to cancel: " + result.length)
+        let result = await Offer.find({status: 0}).populate("member_id")
 
-        for (const offer of result) {
+        let suspended = _.filter(result, (o) => o.member_id.status == 1)
+
+        console.log("Total open offers: " + result.length)
+        console.log("Total offers to cancel: " + suspended.length)
+
+        for (const offer of suspended) {
             // console.log("Cancelling offer for: " + offer.member_id.fullname + " Ref#: " + offer.refno + " date: " + moment(offer.transdate).format("YYYY-MM-DD"))
 
-            const PK = process.env.SENDER_PK
-            const cwallet = new ethers.Wallet(PK, customHttpProvider)              
-            const pmlContract = new ethers.Contract(PMLContractConfig.address, PMLContractConfig.abi, customHttpProvider);
-            let pmltokens = 0.00010315924653
-            let amtStr = stripExcessDecimals(pmltokens) 
-            var bgamount = parseEther(amtStr)            
-            let receiver =  offer.member_id.walletaddress          
-            let tx = await pmlContract.connect(cwallet).transfer(receiver, bgamount)            
-            tx.wait(1)        
-            console.log(tx.hash)
+            // const PK = process.env.SENDER_PK
+            // const cwallet = new ethers.Wallet(PK, customHttpProvider)              
+            // const pmlContract = new ethers.Contract(PMLContractConfig.address, PMLContractConfig.abi, customHttpProvider);
+            // let pmltokens = 0.00010315924653
+            // let amtStr = stripExcessDecimals(pmltokens) 
+            // var bgamount = parseEther(amtStr)            
+            // let receiver =  offer.member_id.walletaddress          
+            // let tx = await pmlContract.connect(cwallet).transfer(receiver, bgamount)            
+            // tx.wait(1)        
+            // console.log(tx.hash)
             await Offer.findByIdAndDelete(offer._id)
-            console.log("Cancelled offer for: " + offer.member_id.fullname + " Ref#: " + offer.refno + " date: " + moment(offer.transdate).format("YYYY-MM-DD") + " amount: " + bgamount.toString() + " receiver: " + receiver) 
+            console.log("Cancelled offer for: " + offer.member_id.fullname + " Ref#: " + offer.refno + " date: " + moment(offer.transdate).format("YYYY-MM-DD")) 
             // break;
         }
+
+        console.log("Done cancelling offers")
 
     }
 
