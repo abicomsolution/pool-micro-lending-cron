@@ -50,6 +50,8 @@ function Job() {
 
     this.runNonWhaleGuarantees = async function () {   
 
+        console.log("Running non-whale guarantees...")
+
         let opeloans = []     
         let qloans = [] 
         let pmlprice = 0    
@@ -58,10 +60,11 @@ function Job() {
             return new Promise(function(resolve, reject) {          
                 // Only get offers for the year 2025
                 const startOf2025 = new Date("2025-01-01T00:00:00.000Z");
-                const endOf2025 = new Date("2025-12-31T23:59:59.999Z");
+                // const endOf2025 = new Date("2025-12-31T23:59:59.999Z");
+                const tenthJan = new Date("2026-01-10T23:59:59.999Z");
                 Offer.find({ 
                     status: 0,
-                    transdate: { $gte: startOf2025, $lte: endOf2025 }
+                    transdate: {  $lte: tenthJan }
                 })
                 .populate("member_id")
                 .populate("borrower_id")
@@ -101,8 +104,13 @@ function Job() {
                             }else if (res.data.data && !res.data.data.isTusted) {
                                 console.log("Not isTrusted in PF: " + e.member_id.walletaddress)                                                                                                          
                             }else{  
-                                console.log("count:" + qloans.length)                                                                                              
-                                qloans.push(e)                            
+                                if (e.member_id.status==0){
+                                    console.log("count:" + qloans.length)                                                                                              
+                                    qloans.push(e)                            
+                                }else{
+                                    console.log("Suspended in PML: " + e.member_id.walletaddress)
+                                }
+                                
                                 // if (qloans.length==400){
                                 //     break;                                    
                                 // }
@@ -124,6 +132,7 @@ function Job() {
                 let countpml = 0                                              
                 async.eachSeries(qloans, function (e, next) {                                                              
                     console.log("Processing Loan Ref#: " + e.refno + " Borrower: " + e.member_id.fullname + " address: " + e.member_id.walletaddress + " Date : " + moment(e.transdate).format("YYYY-MM-DD"))
+                    // next()
                     guaranteeLoan(e, pmlprice, function(amount){                    
                         countpml += 1
                         totalpml += Number(amount)                   
