@@ -3,6 +3,8 @@ const Offer = require("./models/offer")
 const Accessfee = require("./models/accessfee")
 const Whitelist = require("./models/whitelist")
 const Gcode = require("./models/gcode")
+const Holding = require("./models/holding")
+const HoldingTrans = require("./models/holdingtrans")
 const _ = require("lodash")
 const async = require("async")
 const moment = require("moment")
@@ -59,12 +61,11 @@ function Job() {
         const getOpenloans = function(){
             return new Promise(function(resolve, reject) {          
                 // Only get offers for the year 2025
-                const startOf2025 = new Date("2025-01-01T00:00:00.000Z");
-                // const endOf2025 = new Date("2025-12-31T23:59:59.999Z");
-                const tenthJan = new Date("2026-01-10T23:59:59.999Z");
+                // const startOf2025 = new Date("2025-01-01T00:00:00.000Z");
+                // // const endOf2025 = new Date("2025-12-31T23:59:59.999Z");
+                // const tenthJan = new Date("2026-01-10T23:59:59.999Z");
                 Offer.find({ 
-                    status: 0,
-                    transdate: {  $lte: tenthJan }
+                    status: 0                    
                 })
                 .populate("member_id")
                 .populate("borrower_id")
@@ -129,20 +130,15 @@ function Job() {
         const updateLoans = function(){
             return new Promise(async function(resolve, reject) {                                          
                 let totalpml = 0                
-                let countpml = 0                                              
-                async.eachSeries(qloans, function (e, next) {                                                              
+                let countpml = 0          
+                for (const e of qloans) {
                     console.log("Processing Loan Ref#: " + e.refno + " Borrower: " + e.member_id.fullname + " address: " + e.member_id.walletaddress + " Date : " + moment(e.transdate).format("YYYY-MM-DD"))
-                    // next()
-                    guaranteeLoan(e, pmlprice, function(amount){                    
-                        countpml += 1
-                        totalpml += Number(amount)                   
-                        next()
-                    })      
-                }, function () {
-                    console.log("Total open loans for guarantee: " + qloans.length)
-                    console.log("Total PML collateral needed: " + countpml + " (" + roundToTwo(totalpml) + " PML)")                                      
-                    resolve()
-                })                                
+                    let amount = await guaranteeHoldingsLoan(e, pmlprice)
+                    countpml += 1
+                    totalpml += Number(amount)
+                }                
+                console.log("Total open loans for guarantee: " + qloans.length)
+                console.log("Total PML collateral needed: " + countpml + " (" + roundToTwo(totalpml) + " PML)")                                        
             })
         }
 
@@ -158,7 +154,122 @@ function Job() {
         })
 
     }
-    
+
+    async function guaranteeHoldingsLoan(data, pmlprice) {
+        
+        let amount = 0      
+        try{            
+            amount = 100 / pmlprice            
+             let hld  = await Holding.findOne({member_id: data.member_id._id})
+            
+            if (!hld) {
+                let params = { member_id: data.member_id._id }
+                let newHolding = new Holding(params)
+                hld = await newHolding.save()                                           
+            }
+
+            var data = {
+                holding_id: hld._id,
+                transdate: moment().toDate(),
+                transtype: 0,
+                amount: amount,
+                offer_id: data._id,      
+            }
+
+            let newTrans = new HoldingTrans(data)
+            await newTrans.save()
+
+            await updateHoldingBalance(hld, function(){})
+
+            let params = {
+                status: 4,
+                ispaid: true,
+                pay_pml_txhash: "",                          
+                paid_at: moment().toDate()       
+            }
+
+            await Offer.findByIdAndUpdate(data._id, params)
+            return amount          
+
+        }catch(err){
+            console.log(err)
+            return 0
+        }       
+    }
+        
+    async function updateHoldingBalance(header, cb) {
+
+        
+        let updateData = {
+            accumulated: 0,
+            used: 0,
+            balance: 0
+        }
+
+        const getAccumulated = function(){
+            return new Promise(function(resolve, reject) {
+                HoldingTrans.aggregate([
+                    { $match: { holding_id: header._id } },
+                    { $group: { _id: null, total: { $sum: { $cond: [ { $eq: [ "$transtype", 0 ] }, "$amount", 0 ] } } } }
+                ])
+                .then((result) => {
+                    if (result.length > 0) {
+                        updateData.accumulated = result[0].total
+                    }   
+                    resolve();
+                })
+                .catch((error) => {
+                    console.log(error)
+                    resolve();
+                });
+            })
+        }
+
+        const getUsed = function(){
+            return new Promise(function(resolve, reject) {
+                HoldingTrans.aggregate([
+                    { $match: { holding_id: header._id } },
+                    { $group: { _id: null, total: { $sum: { $cond: [ { $eq: [ "$transtype", 1 ] }, "$amount", 0 ] } } } }
+                ])
+                .then((result) => {
+                    if (result.length > 0) {
+                        updateData.used = result[0].total
+                    }   
+                    resolve();
+                })
+                .catch((error) => {
+                    console.log(error)
+                    resolve();
+                });
+            })
+        }
+        
+        const updateBalance = function(){
+            return new Promise(function(resolve, reject) {
+                updateData.balance = updateData.accumulated - updateData.used
+                Holding.findByIdAndUpdate(header._id, { $set: updateData })
+                .then(() => {
+                    resolve();
+                })
+                .catch((error) => {
+                    console.log(error)
+                    resolve();
+                });
+            })
+        }
+        
+
+        getAccumulated()
+        .then(getUsed)
+        .then(updateBalance)
+        .then(() => {
+            cb()
+        })
+        .catch((error) => {
+            console.log(error)
+            cb()
+        })
+    }
 
     this.runGuarantees = async function () {   
 
@@ -258,7 +369,6 @@ function Job() {
         })
 
     }
-    
 
     async function guaranteeLoan(data, pmlprice, cb) {
         
