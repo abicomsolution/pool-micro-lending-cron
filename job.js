@@ -1649,6 +1649,147 @@ function Job() {
         console.log("Total suspended: " + suspendedCount + ", Not found: " + notfound)
         console.log("Total members: " + members.length)
     }
+
+
+    this.distributePaidTranings = async function () {   
+
+        const arr = require("./training.json")
+        let pmlprice = 0
+        let uniw = []
+        let fw = []
+        let dw = []
+
+        const checkDuplicates = function(){
+            return new Promise( async function(resolve, reject) {          
+                const uniqueArr = _.uniqBy(arr, e => e.wallet?.toLowerCase().trim());
+                console.log(`Original count: ${arr.length}, Unique count: ${uniqueArr.length}`);                               
+                for (const e of uniqueArr) {
+                    const member = await Member.findOne({walletaddress: new RegExp(`^${e.wallet}$`, 'i')})
+                    if (member){
+                        if (member.status==0) {
+                            fw.push(member)
+                        }
+                    }                    
+                }
+                resolve()
+                // resolve()
+            })
+        }
+      
+    
+       
+        const filterQualified = function(){
+            return new Promise(async function(resolve, reject) {      
+                for (const e of fw) {                                 
+                    try{
+                        console.log("Checking wallet: " + e.fullname + " " + e.walletaddress)
+                        let url = "https://poolfunding.io/api/check-status/"+ e.walletaddress
+                        // console.log(url)
+                        let res = await axios.get(url)
+                        if (res.data && res.data.status == 1) {                              
+                            if (res.data.data && res.data.data.isSuspended) {
+                                console.log("Suspended in PF: " + e.walletaddress)                                                             
+                            }else if (res.data.data && !res.data.data.isVerified) {
+                                console.log("Not verified in PF: " + e.walletaddress)                                                                                                         
+                            }else if (res.data.data && !res.data.data.isTusted) {
+                                console.log("Not isTrusted in PF: " + e.walletaddress)                                                                                                          
+                            }else{  
+                                console.log("count:" + dw.length)                                                                                              
+                                dw.push(e)                                                                 
+                            }                                    
+                        }else{
+                            console.log("Not found in PF: " + e.walletaddress)                                                              
+                        }                                                   
+                    }catch(err){
+                        console.error("Error occurred while waiting:", err.name)
+                    }                    
+                }            
+                console.log("Total qualified: " + fw.length)           
+                resolve()                      
+            })
+        }
+
+        const getPMLPrice= function(){
+            return new Promise(function(resolve, reject) {          
+                pullPMLPrice((price)=>{                
+                    pmlprice = price
+                    resolve()
+                })    
+            })
+        }            
+
+
+        const sendPML = function(){
+            return new Promise(async function(resolve, reject) {                                          
+                let totalpml = 0                
+                let countpml = 0
+                for (const e of dw) {
+                    console.log("Sending PML for wallet: " + e.fullname + " " + e.walletaddress)
+                    let amount = await sendPMLTokensHoldingsForTraining(e, pmlprice)
+                    countpml += 1
+                    totalpml += Number(amount)
+                }                                
+                console.log("Total PML sent: " + countpml + " (" + roundToTwo(totalpml) + " PML)")                                        
+            })
+        }
+
+        checkDuplicates()   
+        .then(filterQualified)    
+        .then(getPMLPrice)       
+        .then(sendPML)
+        .then(function () {
+            console.log("distributePaidTranings completed!")
+        })
+        .catch(function(err){
+            console.log(err)            
+        })
+
+    }
+
+    this.checkDuplicateWalletAddress = function () {
+
+        const arr = require("./training_r.json")
+        // Remove duplicate wallet addresses
+        const uniqueArr = _.uniqBy(arr, e => e.wallet?.toLowerCase().trim());
+        console.log(`Original count: ${arr.length}, Unique count: ${uniqueArr.length}`);
+        fs.writeFileSync('training.json', JSON.stringify(uniqueArr, null, 2), 'utf8');
+    }
+
+    
+    async function sendPMLTokensHoldingsForTraining(data, pmlprice) {
+
+     
+        let amount =  50 / pmlprice      
+        console.log("PML tokens to send: " + amount + " price: " + pmlprice)   
+                            
+        let hld  = await Holding.findOne({member_id: data._id})
+        
+        if (!hld) {
+            let params = { member_id: data._id }
+            let newHolding = new Holding(params)
+            hld = await newHolding.save()                                           
+        }
+
+        var data = {
+            holding_id: hld._id,
+            transdate: moment().toDate(),
+            transtype: 0,
+            amount: amount,
+            offer_id: null 
+        }
+
+        let newTrans = new HoldingTrans(data)
+        await newTrans.save()
+
+        await updateHoldingBalance(hld, function(){})
+
+        return amount
+
+       
+    }
+
+
+
 }
 
 

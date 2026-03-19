@@ -21,12 +21,16 @@ mongoose.connect(config.mongoURL, { useNewUrlParser: true })
 })
 
 
+// job.checkDuplicateWalletAddress()
+
+job.distributePaidTranings()
+
 // job.updateSuspended()
 
 // job1.runFaceRecognition2()
 
 // job.updateSuspended()
-job.runNonWhaleGuarantees()
+//job.runNonWhaleGuarantees()
 // job.cancelOffers()
 // job.generateBatchWhitelist()
 // job.saveGcodes()
