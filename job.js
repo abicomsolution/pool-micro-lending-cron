@@ -1655,7 +1655,7 @@ function Job() {
 
     this.distributePaidTranings = async function () {   
 
-        const arr = require("./training.json")
+        const arr = require("./training-2.json")
         let pmlprice = 0
         let uniw = []
         let fw = []
