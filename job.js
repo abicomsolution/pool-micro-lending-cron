@@ -65,13 +65,13 @@ function Job() {
                 // // const endOf2025 = new Date("2025-12-31T23:59:59.999Z");
                 // const tenthJan = new Date("2026-01-10T23:59:59.999Z");
                 Offer.find({ 
-                    status: 0                    
+                    status: 0                     
                 })
                 .populate("member_id")
                 .populate("borrower_id")
                 .sort({ transdate: 1 })
                 .then((result) => {                    
-                    console.log("Total open loans in 2025: " + result.length);     
+                    console.log("Total open loans: " + result.length);     
                     opeloans = result;                                 
                     resolve();
                 })
@@ -156,6 +156,7 @@ function Job() {
     }
 
     async function guaranteeHoldingsLoan(data, pmlprice) {
+
         
         let amount = 0      
         try{            
@@ -168,7 +169,7 @@ function Job() {
                 hld = await newHolding.save()                                           
             }
 
-            var data = {
+            var params = {
                 holding_id: hld._id,
                 transdate: moment().toDate(),
                 transtype: 0,
@@ -176,19 +177,20 @@ function Job() {
                 offer_id: data._id,      
             }
 
-            let newTrans = new HoldingTrans(data)
+            let newTrans = new HoldingTrans(params)
             await newTrans.save()
 
             await updateHoldingBalance(hld, function(){})
 
-            let params = {
+            let params2 = {
                 status: 4,
                 ispaid: true,
                 pay_pml_txhash: "",                          
                 paid_at: moment().toDate()       
             }
-
-            await Offer.findByIdAndUpdate(data._id, params)
+            
+            console.log("Updating offer with guarantee for Loan Ref#: " + data.refno + " id: " + data._id + " amount: " + amount + " PML")
+            await Offer.findByIdAndUpdate(data._id, params2)
             return amount          
 
         }catch(err){
